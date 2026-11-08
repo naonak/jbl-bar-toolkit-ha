@@ -190,6 +190,53 @@
     },
     "unsupported_model": {
       "message": "The toolkit remote at this address now reports model {model}. This integration only supports the Bar 9.1 (bar91)."
+    },
+    "display_one_length": {
+      "message": "Choose only one of repeat, duration or until cancelled."
+    },
+    "display_duration": {
+      "message": "The duration goes from 1 second to 24 hours."
+    },
+    "display_unsupported": {
+      "message": "The browser remote on the soundbar does not show messages yet. Update the JBL Bar Toolkit on the bar."
+    }
+  },
+  "services": {
+    "display_message": {
+      "name": "Show a message on the display",
+      "description": "Shows text on the soundbar's front display, on or in standby, without waking it. The display shows capital letters without accents: the text is converted (\"Fridge open\" shows as FRIDGE OPEN). The bar's own messages (volume, HELLO…) come first; yours waits and continues.",
+      "fields": {
+        "message": {
+          "name": "Message",
+          "description": "Up to 31 characters after conversion: letters, digits, space and - . : ! ? '."
+        },
+        "id": {
+          "name": "Id",
+          "description": "Name of the message (a-z, 0-9, _ and -). A new message with the same id replaces it, so \"fridge closed\" can replace \"fridge open\". Messages with different ids are shown one after the other."
+        },
+        "repeat": {
+          "name": "Repeat",
+          "description": "Number of passes (1-99). Default: one pass. Choose repeat, duration or forever, not several."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "Repeat the message for this long (up to 24 h); the last pass is shown to its end."
+        },
+        "forever": {
+          "name": "Until cancelled",
+          "description": "Repeat until the message is cancelled or replaced by one with the same id."
+        }
+      }
+    },
+    "display_cancel": {
+      "name": "Cancel a display message",
+      "description": "Stops the message with this id, or every message when no id is given.",
+      "fields": {
+        "id": {
+          "name": "Id",
+          "description": "Id of the message to stop. Empty: every message."
+        }
+      }
     }
   }
 }

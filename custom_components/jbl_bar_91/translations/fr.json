@@ -190,6 +190,53 @@
     },
     "unsupported_model": {
       "message": "La télécommande du toolkit à cette adresse indique maintenant le modèle {model}. Cette intégration ne prend en charge que la Bar 9.1 (bar91)."
+    },
+    "display_one_length": {
+      "message": "Choisissez un seul réglage parmi répétitions, durée et jusqu'à annulation."
+    },
+    "display_duration": {
+      "message": "La durée va de 1 seconde à 24 heures."
+    },
+    "display_unsupported": {
+      "message": "La télécommande installée sur la barre n'affiche pas encore de messages. Mettez à jour JBL Bar Toolkit sur la barre."
+    }
+  },
+  "services": {
+    "display_message": {
+      "name": "Afficher un message sur l'écran",
+      "description": "Affiche un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. L'écran n'affiche que des majuscules sans accent : le texte est converti (« Frigo fermé » s'affiche FRIGO FERME). Les messages de la barre (volume, HELLO…) passent en premier ; le vôtre attend puis reprend.",
+      "fields": {
+        "message": {
+          "name": "Message",
+          "description": "31 caractères au plus après conversion : lettres, chiffres, espace et - . : ! ? '."
+        },
+        "id": {
+          "name": "Identifiant",
+          "description": "Nom du message (a-z, 0-9, _ et -). Un nouveau message avec le même identifiant le remplace : « frigo fermé » peut remplacer « frigo ouvert ». Des messages d'identifiants différents passent l'un après l'autre."
+        },
+        "repeat": {
+          "name": "Répétitions",
+          "description": "Nombre de passages (1-99). Par défaut : un passage. Choisissez répétitions, durée ou jusqu'à annulation, pas plusieurs."
+        },
+        "duration": {
+          "name": "Durée",
+          "description": "Répéter le message pendant cette durée (24 h au plus) ; le dernier passage va jusqu'au bout."
+        },
+        "forever": {
+          "name": "Jusqu'à annulation",
+          "description": "Répéter jusqu'à ce que le message soit annulé ou remplacé par un message de même identifiant."
+        }
+      }
+    },
+    "display_cancel": {
+      "name": "Annuler un message de l'écran",
+      "description": "Arrête le message de cet identifiant, ou tous les messages si aucun identifiant n'est donné.",
+      "fields": {
+        "id": {
+          "name": "Identifiant",
+          "description": "Identifiant du message à arrêter. Vide : tous les messages."
+        }
+      }
     }
   }
 }

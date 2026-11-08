@@ -1,7 +1,10 @@
 """Media player: power, volume, mute, source, playback and now playing."""
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Any
+
+import voluptuous as vol
 
 from homeassistant.components.media_player import (
     MediaPlayerDeviceClass,
@@ -10,9 +13,11 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import SOURCES, VOLUME_MAX
+from .const import DISPLAY_MESSAGE, DOMAIN, SOURCES, VOLUME_MAX
 from .coordinator import JblBarConfigEntry
 from .entity import JblBarEntity
 
@@ -27,6 +32,24 @@ PLAYBACK = {
 
 async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: AddConfigEntryEntitiesCallback) -> None:
     add([JblBarMediaPlayer(entry.runtime_data, "media_player")])
+    platform = entity_platform.async_get_current_platform()
+    # Front display messages (remote extension bar91.display-message).
+    platform.async_register_entity_service(
+        "display_message",
+        {
+            vol.Required("message"): vol.All(cv.string, vol.Length(min=1, max=64)),
+            vol.Optional("id"): vol.All(cv.string, vol.Match(r"^[a-z0-9_-]{1,32}$")),
+            vol.Optional("repeat"): vol.All(vol.Coerce(int), vol.Range(min=1, max=99)),
+            vol.Optional("duration"): cv.positive_time_period,
+            vol.Optional("forever"): cv.boolean,
+        },
+        "async_display_message",
+    )
+    platform.async_register_entity_service(
+        "display_cancel",
+        {vol.Optional("id"): vol.All(cv.string, vol.Match(r"^[a-z0-9_-]{1,32}$"))},
+        "async_display_cancel",
+    )
 
 
 class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
@@ -143,3 +166,41 @@ class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
 
     async def async_media_previous_track(self) -> None:
         await self._playback(F.PREVIOUS_TRACK)
+
+    async def async_display_message(
+        self,
+        message: str,
+        id: str | None = None,
+        repeat: int | None = None,
+        duration: timedelta | None = None,
+        forever: bool | None = None,
+    ) -> None:
+        """Show a message on the bar's front display (on or in standby)."""
+        if sum(x is not None and x is not False for x in (repeat, duration, forever)) > 1:
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="display_one_length")
+        parameters: dict[str, Any] = {"text": message}
+        if id:
+            parameters["id"] = id
+        if repeat is not None:
+            parameters["repeat"] = repeat
+        if duration is not None:
+            seconds = int(duration.total_seconds())
+            if not 1 <= seconds <= 86400:
+                raise ServiceValidationError(translation_domain=DOMAIN, translation_key="display_duration")
+            parameters["duration_s"] = seconds
+        if forever:
+            parameters["forever"] = True
+        await self._display_action("show", parameters)
+
+    async def async_display_cancel(self, id: str | None = None) -> None:
+        """Stop a message (by id), or every message."""
+        await self._display_action("cancel", {"id": id} if id else None)
+
+    async def _display_action(self, action: str, parameters: dict[str, Any] | None) -> None:
+        try:
+            await self.coordinator.async_action(f"{DISPLAY_MESSAGE}.{action}", parameters=parameters)
+        except HomeAssistantError as err:
+            if (err.translation_placeholders or {}).get("error") == "unknown control":
+                # Remote installed before display messages.
+                raise HomeAssistantError(translation_domain=DOMAIN, translation_key="display_unsupported") from err
+            raise

@@ -48,6 +48,47 @@ Then: *Settings → Devices & services → Add integration → JBL Bar Toolkit (
 | Rear speakers docked, Bluetooth connected | Binary sensors |
 | CPU, Memory used, Temperature, Wi-Fi signal, Uptime | Diagnostics (the last two disabled by default) |
 
+## Messages on the display
+
+Two services show your own text on the bar's front display, on or in standby, without waking it. Both target the bar's media player. They need a toolkit remote with display messages (`bar91.display-message`, November 2026); an older remote is reported clearly.
+
+- `jbl_bar_91.display_message`:
+  - `message`: up to 31 characters once converted. The display shows capital letters without accents, so `Frigo fermé` shows as `FRIGO FERME`.
+  - How long, one of:
+    - `repeat`: 1–99 passes (default: one pass);
+    - `duration`: up to 24 h; the last pass is shown to its end;
+    - `forever`: until the message is cancelled or replaced.
+  - `id`: a message with the same id replaces it; messages with different ids are shown one after the other.
+- `jbl_bar_91.display_cancel` stops the message with `id`, or every message.
+
+The bar's own messages (volume, `HELLO` at wake-up…) come first: yours waits, then shows the interrupted pass again. A 1.5 s blank separates passes. Example, the fridge door:
+
+```yaml
+- alias: Fridge open
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.fridge_door
+      to: "on"
+      for: "00:02:00"
+  actions:
+    - action: jbl_bar_91.display_message
+      target:
+        entity_id: media_player.jbl_bar_9_1
+      data: {message: "Frigo ouvert", id: fridge, forever: true}
+- alias: Fridge closed
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.fridge_door
+      to: "off"
+  actions:
+    - action: jbl_bar_91.display_message
+      target:
+        entity_id: media_player.jbl_bar_9_1
+      data: {message: "Frigo fermé", id: fridge}
+```
+
+The second message replaces the first, so the endless one stops. Details: [toolkit docs](https://github.com/kisinga/jbl-bar-toolkit/blob/main/docs/DISPLAY_MESSAGES.md).
+
 ## How it behaves
 
 - **Live updates.** While the bar is on, the integration listens to the remote's event stream, so changes from the physical remote or the web page appear immediately. The stream makes the remote sample the bar every second, so it is closed in standby; a light state request every 15 s then detects the wake.
@@ -75,6 +116,8 @@ Tests run Home Assistant against a fake remote that enforces the real API rules 
 ## Français
 
 Intégration Home Assistant pour la **JBL Bar 9.1**, via la télécommande web locale de [kisinga/jbl-bar-toolkit](https://github.com/kisinga/jbl-bar-toolkit) (dépôt anciennement `naonak/jbl-bar-9.1-ha` : mettez à jour l'URL du dépôt personnalisé dans HACS, les entités ne changent pas). Installez d'abord cette télécommande sur la barre, avec un `allowed_cidr` qui inclut l'adresse de Home Assistant. Ajoutez ensuite ce dépôt dans HACS (*Dépôts personnalisés*, catégorie *Intégration*), installez-le, redémarrez, puis ajoutez l'intégration en saisissant l'IP de la barre. Seule la Bar 9.1 est prise en charge : l'intégration vérifie le modèle annoncé par la télécommande et refuse une autre barre. L'interface est traduite en français.
+
+**Messages sur l'écran.** Les services `jbl_bar_91.display_message` et `jbl_bar_91.display_cancel` affichent un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. Le message accepte 31 caractères ; il est converti en majuscules sans accent. On peut le répéter (`repeat`), l'afficher pendant une durée (`duration`) ou jusqu'à annulation (`forever`). Un message avec le même `id` remplace le précédent : « Frigo fermé » remplace ainsi « Frigo ouvert ». Exemple ci-dessus.
 
 ## License
 

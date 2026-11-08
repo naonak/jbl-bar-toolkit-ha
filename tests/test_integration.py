@@ -8,7 +8,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -490,3 +490,46 @@ async def test_no_front_eq_status_without_helper(hass: HomeAssistant, remote) ->
     remote.eq_helper = False
     await setup(hass, remote)
     assert hass.states.get("sensor.jbl_bar_9_1_front_eq_status") is None
+
+
+async def test_display_message_and_cancel(hass: HomeAssistant, remote) -> None:
+    """The services send the remote's display-message actions with typed parameters."""
+    await setup(hass, remote)
+    await call(hass, DOMAIN, "display_message", MP, message="Frigo ouvert", id="fridge", forever=True)
+    await call(hass, DOMAIN, "display_message", MP, message="Frigo fermé", id="fridge")
+    await call(hass, DOMAIN, "display_message", MP, message="Colis", repeat=3)
+    await call(hass, DOMAIN, "display_message", MP, message="Porte", duration={"minutes": 5})
+    await call(hass, DOMAIN, "display_cancel", MP, id="fridge")
+    await call(hass, DOMAIN, "display_cancel", MP)
+    assert remote.display_log == [
+        ("show", {"text": "Frigo ouvert", "id": "fridge", "forever": True}),
+        ("show", {"text": "Frigo fermé", "id": "fridge"}),
+        ("show", {"text": "Colis", "repeat": 3}),
+        ("show", {"text": "Porte", "duration_s": 300}),
+        ("cancel", {"id": "fridge"}),
+        ("cancel", None),
+    ]
+
+
+async def test_display_message_validation(hass: HomeAssistant, remote) -> None:
+    await setup(hass, remote)
+    with pytest.raises(ServiceValidationError):
+        await call(hass, DOMAIN, "display_message", MP, message="A", repeat=2, forever=True)
+    with pytest.raises(ServiceValidationError):
+        await call(hass, DOMAIN, "display_message", MP, message="A", duration={"hours": 25})
+    with pytest.raises(Exception):  # schema: id format, repeat range
+        await call(hass, DOMAIN, "display_message", MP, message="A", id="Fridge Door")
+    with pytest.raises(Exception):
+        await call(hass, DOMAIN, "display_message", MP, message="A", repeat=100)
+    assert remote.display_log == []
+    # forever: false is the same as leaving it out.
+    await call(hass, DOMAIN, "display_message", MP, message="A", repeat=2, forever=False)
+    assert remote.display_log == [("show", {"text": "A", "repeat": 2})]
+
+
+async def test_display_message_needs_a_recent_remote(hass: HomeAssistant, remote) -> None:
+    remote.display = False
+    await setup(hass, remote)
+    with pytest.raises(HomeAssistantError) as err:
+        await call(hass, DOMAIN, "display_message", MP, message="Frigo")
+    assert err.value.translation_key == "display_unsupported"

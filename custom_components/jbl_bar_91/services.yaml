@@ -1,0 +1,38 @@
+display_message:
+  target:
+    entity:
+      integration: jbl_bar_91
+      domain: media_player
+  fields:
+    message:
+      required: true
+      example: "Fridge open"
+      selector:
+        text:
+    id:
+      example: "fridge"
+      selector:
+        text:
+    repeat:
+      example: 3
+      selector:
+        number:
+          min: 1
+          max: 99
+          mode: box
+    duration:
+      selector:
+        duration:
+    forever:
+      selector:
+        boolean:
+display_cancel:
+  target:
+    entity:
+      integration: jbl_bar_91
+      domain: media_player
+  fields:
+    id:
+      example: "fridge"
+      selector:
+        text:

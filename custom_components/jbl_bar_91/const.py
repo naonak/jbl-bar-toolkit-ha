@@ -34,5 +34,8 @@ AV_SYNC_CHUNK = 250
 AV_SYNC_LEGACY_CHUNK = 50
 AV_SYNC_SOURCES = (0, 3)
 
+# Front display messages: extension of remotes from November 2026 on.
+DISPLAY_MESSAGE = "bar91.display-message"
+
 # Center levels exposed by remotes that include the center-level control.
 CENTER_DB = (0, 2.4, 4.8, 7.2, 9.6, 12)

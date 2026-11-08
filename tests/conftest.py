@@ -52,6 +52,8 @@ class FakeRemote:
         self.eq_kept: list | None = None
         self.bass_offset: float | None = 0.0  # None: remote without the bass offset extension
         self.remembered_mode: str | None = None  # set when smart_mode_memory is on
+        self.display = True  # False: remote without the display-message extension
+        self.display_log: list[tuple[str, dict | None]] = []
         self.streams = 0
         self.changed = asyncio.Condition()
         self.port = 0
@@ -146,6 +148,14 @@ class FakeRemote:
                 return web.json_response({"error": "bass offset must be -3 to 3 dB in 0.5 dB steps", "state": self.state()}, status=409)
             self.bass_offset = float(db)
             await self.notify()
+            return web.json_response(self.state())
+        if a.startswith("bar91.display-message."):
+            params = req.get("parameters")
+            if not self.display or a not in ("bar91.display-message.show", "bar91.display-message.cancel"):
+                return web.json_response({"error": "unknown control", "state": self.state()}, status=409)
+            if a.endswith(".show") and not (params or {}).get("text"):
+                return web.json_response({"error": "provide a text", "state": self.state()}, status=409)
+            self.display_log.append((a.rsplit(".", 1)[1], params))
             return web.json_response(self.state())
         if a == "av_sync_set":
             v = req.get("value")
