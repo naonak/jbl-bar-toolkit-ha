@@ -87,7 +87,17 @@ The bar's own messages (volume, `HELLO` at wake-up…) come first: yours waits, 
       data: {message: "Frigo fermé", id: fridge}
 ```
 
-The second message replaces the first, so the endless one stops. Details: [toolkit docs](https://github.com/kisinga/jbl-bar-toolkit/blob/main/docs/DISPLAY_MESSAGES.md).
+The second message replaces the first, so the endless one stops.
+
+**As a notification target.** The bar also has a notify entity, *Display* (`notify.jbl_bar_9_1_display`, `notify.jbl_bar_9_1_ecran` with Home Assistant in French). `notify.send_message` shows the message in two passes. When a title is given, it goes in front of the message if both fit in 31 characters. The entity can be part of a notify group, next to your phone. For repeats, a duration or replacement by id, use `jbl_bar_91.display_message`.
+
+```yaml
+action: notify.send_message
+target:
+  entity_id: notify.jbl_bar_9_1_display
+data:
+  message: "Colis livré"
+``` Details: [toolkit docs](https://github.com/kisinga/jbl-bar-toolkit/blob/main/docs/DISPLAY_MESSAGES.md).
 
 ## How it behaves
 
@@ -117,7 +127,7 @@ Tests run Home Assistant against a fake remote that enforces the real API rules 
 
 Intégration Home Assistant pour la **JBL Bar 9.1**, via la télécommande web locale de [kisinga/jbl-bar-toolkit](https://github.com/kisinga/jbl-bar-toolkit) (dépôt anciennement `naonak/jbl-bar-9.1-ha` : mettez à jour l'URL du dépôt personnalisé dans HACS, les entités ne changent pas). Installez d'abord cette télécommande sur la barre, avec un `allowed_cidr` qui inclut l'adresse de Home Assistant. Ajoutez ensuite ce dépôt dans HACS (*Dépôts personnalisés*, catégorie *Intégration*), installez-le, redémarrez, puis ajoutez l'intégration en saisissant l'IP de la barre. Seule la Bar 9.1 est prise en charge : l'intégration vérifie le modèle annoncé par la télécommande et refuse une autre barre. L'interface est traduite en français.
 
-**Messages sur l'écran.** Les services `jbl_bar_91.display_message` et `jbl_bar_91.display_cancel` affichent un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. Le message accepte 31 caractères ; il est converti en majuscules sans accent. On peut le répéter (`repeat`), l'afficher pendant une durée (`duration`) ou jusqu'à annulation (`forever`). Un message avec le même `id` remplace le précédent : « Frigo fermé » remplace ainsi « Frigo ouvert ». Exemple ci-dessus.
+**Messages sur l'écran.** Les services `jbl_bar_91.display_message` et `jbl_bar_91.display_cancel` affichent un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. Le message accepte 31 caractères ; il est converti en majuscules sans accent. On peut le répéter (`repeat`), l'afficher pendant une durée (`duration`) ou jusqu'à annulation (`forever`). Un message avec le même `id` remplace le précédent : « Frigo fermé » remplace ainsi « Frigo ouvert ». Exemple ci-dessus. L'entité de notification *Écran* (`notify.jbl_bar_9_1_ecran`) sert de cible à `notify.send_message` : chaque notification passe deux fois, et le titre est placé devant le message s'il tient dans les 31 caractères. Elle peut entrer dans un groupe de notifications, avec votre téléphone par exemple.
 
 ## License
 

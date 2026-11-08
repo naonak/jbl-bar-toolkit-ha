@@ -13,11 +13,11 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import DISPLAY_MESSAGE, DOMAIN, SOURCES, VOLUME_MAX
+from .const import DOMAIN, SOURCES, VOLUME_MAX
 from .coordinator import JblBarConfigEntry
 from .entity import JblBarEntity
 
@@ -190,17 +190,8 @@ class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
             parameters["duration_s"] = seconds
         if forever:
             parameters["forever"] = True
-        await self._display_action("show", parameters)
+        await self.display_action("show", parameters)
 
     async def async_display_cancel(self, id: str | None = None) -> None:
         """Stop a message (by id), or every message."""
-        await self._display_action("cancel", {"id": id} if id else None)
-
-    async def _display_action(self, action: str, parameters: dict[str, Any] | None) -> None:
-        try:
-            await self.coordinator.async_action(f"{DISPLAY_MESSAGE}.{action}", parameters=parameters)
-        except HomeAssistantError as err:
-            if (err.translation_placeholders or {}).get("error") == "unknown control":
-                # Remote installed before display messages.
-                raise HomeAssistantError(translation_domain=DOMAIN, translation_key="display_unsupported") from err
-            raise
+        await self.display_action("cancel", {"id": id} if id else None)

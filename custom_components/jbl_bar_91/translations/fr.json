@@ -167,6 +167,11 @@
       "command_running": {
         "name": "Commande en cours"
       }
+    },
+    "notify": {
+      "display": {
+        "name": "Écran"
+      }
     }
   },
   "exceptions": {

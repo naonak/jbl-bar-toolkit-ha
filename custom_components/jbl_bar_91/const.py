@@ -36,6 +36,8 @@ AV_SYNC_SOURCES = (0, 3)
 
 # Front display messages: extension of remotes from November 2026 on.
 DISPLAY_MESSAGE = "bar91.display-message"
+DISPLAY_TEXT_MAX = 31  # characters the display shows, once upper-cased and folded
+DISPLAY_NOTIFY_PASSES = 2  # passes per notification (notify.send_message)
 
 # Center levels exposed by remotes that include the center-level control.
 CENTER_DB = (0, 2.4, 4.8, 7.2, 9.6, 12)

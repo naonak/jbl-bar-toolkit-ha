@@ -167,6 +167,11 @@
       "command_running": {
         "name": "Command running"
       }
+    },
+    "notify": {
+      "display": {
+        "name": "Display"
+      }
     }
   },
   "exceptions": {

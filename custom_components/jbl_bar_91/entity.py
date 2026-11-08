@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DISPLAY_MESSAGE, DOMAIN
 from .coordinator import JblBarCoordinator
 
 
@@ -89,6 +90,16 @@ class JblBarEntity(CoordinatorEntity[JblBarCoordinator]):
     @property
     def state_doc(self) -> dict[str, Any]:
         return self.coordinator.data or {}
+
+    async def display_action(self, action: str, parameters: dict[str, Any] | None) -> None:
+        """Send a front-display message action (remote extension bar91.display-message)."""
+        try:
+            await self.coordinator.async_action(f"{DISPLAY_MESSAGE}.{action}", parameters=parameters)
+        except HomeAssistantError as err:
+            if (err.translation_placeholders or {}).get("error") == "unknown control":
+                # Remote installed before display messages.
+                raise HomeAssistantError(translation_domain=DOMAIN, translation_key="display_unsupported") from err
+            raise
 
     @property
     def setup(self) -> dict[str, Any]:

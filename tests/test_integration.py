@@ -533,3 +533,28 @@ async def test_display_message_needs_a_recent_remote(hass: HomeAssistant, remote
     with pytest.raises(HomeAssistantError) as err:
         await call(hass, DOMAIN, "display_message", MP, message="Frigo")
     assert err.value.translation_key == "display_unsupported"
+
+
+async def test_display_notify_entity(hass: HomeAssistant, remote) -> None:
+    """notify.send_message shows the message on the display, two passes; the title goes first when it fits."""
+    await setup(hass, remote)
+    target = "notify.jbl_bar_9_1_display"
+    assert hass.states.get(target) is not None
+    await hass.services.async_call("notify", "send_message", {"entity_id": target, "message": "Colis livré"}, blocking=True)
+    await hass.services.async_call("notify", "send_message", {"entity_id": target, "message": "Porte ouverte", "title": "Garage"}, blocking=True)
+    await hass.services.async_call(
+        "notify", "send_message", {"entity_id": target, "message": "La porte du garage est ouverte", "title": "Alerte"}, blocking=True
+    )
+    assert remote.display_log == [
+        ("show", {"text": "Colis livré", "repeat": 2}),
+        ("show", {"text": "Garage Porte ouverte", "repeat": 2}),
+        ("show", {"text": "La porte du garage est ouverte", "repeat": 2}),
+    ]
+
+
+async def test_display_notify_needs_a_recent_remote(hass: HomeAssistant, remote) -> None:
+    remote.display = False
+    await setup(hass, remote)
+    with pytest.raises(HomeAssistantError) as err:
+        await hass.services.async_call("notify", "send_message", {"entity_id": "notify.jbl_bar_9_1_display", "message": "X"}, blocking=True)
+    assert err.value.translation_key == "display_unsupported"
