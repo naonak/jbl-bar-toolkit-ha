@@ -217,7 +217,7 @@
         },
         "id": {
           "name": "Identifiant",
-          "description": "Nom du message (a-z, 0-9, _ et -). Un nouveau message avec le même identifiant le remplace : « frigo fermé » peut remplacer « frigo ouvert ». Des messages d'identifiants différents passent l'un après l'autre."
+          "description": "Nom du message (a-z, 0-9, _ et -). Un nouveau message avec le même identifiant le remplace : « frigo fermé » peut remplacer « frigo ouvert ». Des messages d'identifiants différents s'affichent à tour de rôle, chacun avec ses propres répétitions, sa durée ou son « jusqu'à annulation »."
         },
         "repeat": {
           "name": "Répétitions",

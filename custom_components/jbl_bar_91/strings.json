@@ -217,7 +217,7 @@
         },
         "id": {
           "name": "Id",
-          "description": "Name of the message (a-z, 0-9, _ and -). A new message with the same id replaces it, so \"fridge closed\" can replace \"fridge open\". Messages with different ids are shown one after the other."
+          "description": "Name of the message (a-z, 0-9, _ and -). A new message with the same id replaces it, so \"fridge closed\" can replace \"fridge open\". Messages with different ids take turns, each with its own repeat, duration or until cancelled."
         },
         "repeat": {
           "name": "Repeat",

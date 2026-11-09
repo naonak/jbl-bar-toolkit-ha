@@ -58,7 +58,7 @@ Two services show your own text on the bar's front display, on or in standby, wi
     - `repeat`: 1–99 passes (default: one pass);
     - `duration`: up to 24 h; the last pass is shown to its end;
     - `forever`: until the message is cancelled or replaced.
-  - `id`: a message with the same id replaces it; messages with different ids are shown one after the other.
+  - `id`: a message with the same id replaces it. Messages with different ids take turns, pass by pass, each with its own repeat, duration or forever: `Hello` ×3 and `Goodbye` ×2 show Hello, Goodbye, Hello, Goodbye, Hello.
 - `jbl_bar_91.display_cancel` stops the message with `id`, or every message.
 
 The bar's own messages (volume, `HELLO` at wake-up…) come first: yours waits, then shows the interrupted pass again. A 1.5 s blank separates passes. Example, the fridge door:
@@ -127,7 +127,7 @@ Tests run Home Assistant against a fake remote that enforces the real API rules 
 
 Intégration Home Assistant pour la **JBL Bar 9.1**, via la télécommande web locale de [kisinga/jbl-bar-toolkit](https://github.com/kisinga/jbl-bar-toolkit) (dépôt anciennement `naonak/jbl-bar-9.1-ha` : mettez à jour l'URL du dépôt personnalisé dans HACS, les entités ne changent pas). Installez d'abord cette télécommande sur la barre, avec un `allowed_cidr` qui inclut l'adresse de Home Assistant. Ajoutez ensuite ce dépôt dans HACS (*Dépôts personnalisés*, catégorie *Intégration*), installez-le, redémarrez, puis ajoutez l'intégration en saisissant l'IP de la barre. Seule la Bar 9.1 est prise en charge : l'intégration vérifie le modèle annoncé par la télécommande et refuse une autre barre. L'interface est traduite en français.
 
-**Messages sur l'écran.** Les services `jbl_bar_91.display_message` et `jbl_bar_91.display_cancel` affichent un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. Le message accepte 31 caractères ; il est converti en majuscules sans accent. On peut le répéter (`repeat`), l'afficher pendant une durée (`duration`) ou jusqu'à annulation (`forever`). Un message avec le même `id` remplace le précédent : « Frigo fermé » remplace ainsi « Frigo ouvert ». Exemple ci-dessus. L'entité de notification *Écran* (`notify.jbl_bar_9_1_ecran`) sert de cible à `notify.send_message` : chaque notification passe deux fois, et le titre est placé devant le message s'il tient dans les 31 caractères. Elle peut entrer dans un groupe de notifications, avec votre téléphone par exemple.
+**Messages sur l'écran.** Les services `jbl_bar_91.display_message` et `jbl_bar_91.display_cancel` affichent un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. Le message accepte 31 caractères ; il est converti en majuscules sans accent. On peut le répéter (`repeat`), l'afficher pendant une durée (`duration`) ou jusqu'à annulation (`forever`). Un message avec le même `id` remplace le précédent : « Frigo fermé » remplace ainsi « Frigo ouvert ». Des messages d'`id` différents s'affichent à tour de rôle, passage par passage, chacun avec ses propres répétitions, sa durée ou son « jusqu'à annulation ». Exemple ci-dessus. L'entité de notification *Écran* (`notify.jbl_bar_9_1_ecran`) sert de cible à `notify.send_message` : chaque notification passe deux fois, et le titre est placé devant le message s'il tient dans les 31 caractères. Elle peut entrer dans un groupe de notifications, avec votre téléphone par exemple.
 
 ## License
 
