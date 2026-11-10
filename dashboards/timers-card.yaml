@@ -28,6 +28,24 @@ cards:
       {%- endfor %}
       {%- endif %}
   - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: button
+        name: +1 min (next timer)
+        icon: mdi:timer-plus-outline
+        tap_action:
+          action: perform-action
+          perform_action: script.jbl_timer_add_minute
+      - type: button
+        name: Stop all timers
+        icon: mdi:timer-off-outline
+        tap_action:
+          action: perform-action
+          perform_action: script.jbl_timer_stop_all
+          confirmation:
+            text: Stop all timers?
+  - type: grid
     columns: 4
     square: false
     cards:
@@ -73,11 +91,3 @@ cards:
         tap_action:
           action: perform-action
           perform_action: script.jbl_timer_start
-  - type: button
-    name: Stop all timers
-    icon: mdi:timer-off-outline
-    tap_action:
-      action: perform-action
-      perform_action: script.jbl_timer_stop_all
-      confirmation:
-        text: Stop all timers?

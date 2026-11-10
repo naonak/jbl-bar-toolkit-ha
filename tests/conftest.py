@@ -55,6 +55,7 @@ class FakeRemote:
         self.display = True  # False: remote without the display-message extension
         self.timers: list[dict] | None = []  # None: remote without timers
         self.timer_log: list[tuple[str, dict | None]] = []
+        self.timer_extend = True  # False: remote with timers but without +1 min
         self.display_log: list[tuple[str, dict | None]] = []
         self.streams = 0
         self.changed = asyncio.Condition()
@@ -165,6 +166,14 @@ class FakeRemote:
                     return web.json_response({"error": "a timer named %s is already running" % name, "state": self.state()}, status=409)
                 self.timers.append({"id": "t%d" % (len(self.timer_log)), "text": name, "countdown": bool(params.get("countdown")),
                                     "sound": params.get("sound", "off"), "remaining_ms": params["duration_s"] * 1000, "ringing": False})
+            elif a.endswith(".extend"):
+                if not self.timer_extend:
+                    self.timer_log.pop()
+                    return web.json_response({"error": "unknown control", "state": self.state()}, status=409)
+                for t in self.timers:
+                    if t["id"] == params.get("id"):
+                        t["remaining_ms"] += params["add_s"] * 1000
+                        t["duration_ms"] = t.get("duration_ms", 0) + params["add_s"] * 1000
             else:
                 self.timers = [t for t in self.timers if t["id"] != params.get("id")]
             return web.json_response(self.state())

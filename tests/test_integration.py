@@ -637,3 +637,40 @@ def test_timer_clock_keeps_end_times_still() -> None:
     doc["extensions"]["bar91.timer"]["timers"][0]["remaining_ms"] = 58800  # 1.2 s later, 1.2 s less
     assert clock.ends(doc, now + timedelta(milliseconds=1500))["t1"] == first
     assert fold_name("  pâtes  à l'œuf ") == "PATES A L'OEUF"
+
+
+async def test_timer_extend(hass: HomeAssistant, remote) -> None:
+    """+1 min by default to the next timer to end; by name or id; refused when none runs or the remote is older."""
+    remote.timers = [
+        {"id": "t1", "text": "PIZZA", "countdown": True, "sound": "off", "remaining_ms": 600000, "duration_ms": 600000, "ringing": False},
+        {"id": "t2", "text": "", "countdown": False, "sound": "off", "remaining_ms": 60000, "duration_ms": 120000, "ringing": False},
+        {"id": "t3", "text": "PATES", "countdown": False, "sound": "off", "remaining_ms": 0, "duration_ms": 30000, "ringing": True},
+    ]
+    await setup(hass, remote)
+    await call(hass, DOMAIN, "timer_extend", MP)
+    assert remote.timer_log[-1] == ("extend", {"id": "t2", "add_s": 60})
+    await call(hass, DOMAIN, "timer_extend", MP, name="pizza", duration={"minutes": 5})
+    assert remote.timer_log[-1] == ("extend", {"id": "t1", "add_s": 300})
+    await call(hass, DOMAIN, "timer_extend", MP, id="t1", duration={"seconds": 30})
+    assert remote.timer_log[-1] == ("extend", {"id": "t1", "add_s": 30})
+    coordinator = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    pizza = next(t for t in hass.states.get("sensor.jbl_bar_9_1_timers").attributes["timers"] if t["name"] == "PIZZA")
+    assert pizza["duration_s"] == 930
+    with pytest.raises(ServiceValidationError) as err:
+        await call(hass, DOMAIN, "timer_extend", MP, name="pates")  # ringing: not extended
+    assert err.value.translation_key == "timer_not_found"
+    with pytest.raises(ServiceValidationError) as err:
+        await call(hass, DOMAIN, "timer_extend", MP, duration={"hours": 2})
+    assert err.value.translation_key == "timer_extend_duration"
+    remote.timer_extend = False
+    with pytest.raises(HomeAssistantError) as err:
+        await call(hass, DOMAIN, "timer_extend", MP)
+    assert err.value.translation_key == "timer_extend_unsupported"
+    remote.timers = []
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    with pytest.raises(ServiceValidationError) as err:
+        await call(hass, DOMAIN, "timer_extend", MP)
+    assert err.value.translation_key == "timer_none_running"

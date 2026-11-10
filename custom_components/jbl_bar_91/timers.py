@@ -64,6 +64,8 @@ class TimerClock:
                 "id": t["id"], "name": t.get("text") or "", "ringing": bool(t.get("ringing")),
                 "ends_at": end.isoformat() if end else None, "countdown": bool(t.get("countdown")),
                 "sound": t.get("sound") or "off",
+                # Start to end, time added included (remotes with +1 min); for progress bars.
+                "duration_s": int(t["duration_ms"]) // 1000 if isinstance(t.get("duration_ms"), int) else None,
             })
         out.sort(key=lambda t: (not t["ringing"], t["ends_at"] or ""))
         return out

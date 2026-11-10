@@ -62,5 +62,7 @@ async def test_card_and_scripts(hass: HomeAssistant, remote) -> None:
     assert "**Timer**: 🔔 ringing" in text and "ends at" in text, text
     assert "in 10 min" in text, text
 
+    await hass.services.async_call("script", "jbl_timer_add_minute", {}, blocking=True)
+    assert remote.timer_log[-1] == ("extend", {"id": "t2", "add_s": 60})  # the next one running (Pizza; the other rings)
     await hass.services.async_call("script", "jbl_timer_stop_all", {}, blocking=True)
     assert remote.timers == []

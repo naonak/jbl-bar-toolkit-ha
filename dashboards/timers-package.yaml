@@ -72,3 +72,11 @@ script:
             {{ integration_entities('jbl_bar_91') | select('match', 'media_player[.]') | first }}
         data:
           all: true
+  jbl_timer_add_minute:
+    alias: Add a minute to the next timer
+    icon: mdi:timer-plus-outline
+    sequence:
+      - action: jbl_bar_91.timer_extend
+        target:
+          entity_id: >-
+            {{ integration_entities('jbl_bar_91') | select('match', 'media_player[.]') | first }}

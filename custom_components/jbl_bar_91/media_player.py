@@ -73,6 +73,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
         },
         "async_timer_cancel",
     )
+    platform.async_register_entity_service(
+        "timer_extend",
+        {
+            vol.Optional("duration"): cv.positive_time_period,
+            vol.Optional("name"): vol.All(cv.string, vol.Length(max=64)),
+            vol.Optional("id"): vol.All(cv.string, vol.Match(r"^t[0-9]{1,9}$")),
+        },
+        "async_timer_extend",
+    )
 
 
 class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
@@ -263,4 +272,24 @@ class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
             raise ServiceValidationError(translation_domain=DOMAIN, translation_key="timer_which")
         for timer_id in ids:
             await self.extension_action(TIMER, "cancel", {"id": timer_id}, "timer_unsupported")
+
+    async def async_timer_extend(self, duration: timedelta | None = None, name: str | None = None, id: str | None = None) -> None:
+        """Add time to a running timer (1 minute by default): by name or id, else the next one to end."""
+        seconds = int(duration.total_seconds()) if duration is not None else 60
+        if not 1 <= seconds <= 3600:
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="timer_extend_duration")
+        running = [t for t in timer_list(self.state_doc) if not t.get("ringing")]
+        if id:
+            target = id
+        elif name is not None:
+            wanted = fold_name(name)
+            found = [t["id"] for t in running if (t.get("text") or "") == wanted]
+            if not found:
+                raise ServiceValidationError(translation_domain=DOMAIN, translation_key="timer_not_found", translation_placeholders={"name": name})
+            target = found[0]
+        else:
+            if not running:
+                raise ServiceValidationError(translation_domain=DOMAIN, translation_key="timer_none_running")
+            target = min(running, key=lambda t: int(t.get("remaining_ms") or 0))["id"]
+        await self.extension_action(TIMER, "extend", {"id": target, "add_s": seconds}, "timer_extend_unsupported")
 

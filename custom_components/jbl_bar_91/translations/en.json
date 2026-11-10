@@ -228,6 +228,15 @@
     },
     "timer_unsupported": {
       "message": "The browser remote on the soundbar has no timers yet. Update the JBL Bar Toolkit on the bar."
+    },
+    "timer_extend_duration": {
+      "message": "The time added goes from 1 second to 1 hour."
+    },
+    "timer_none_running": {
+      "message": "No timer is running."
+    },
+    "timer_extend_unsupported": {
+      "message": "The browser remote on the soundbar cannot add time to a timer yet. Update the JBL Bar Toolkit on the bar."
     }
   },
   "services": {
@@ -312,6 +321,24 @@
         "all": {
           "name": "All",
           "description": "Stop every timer."
+        }
+      }
+    },
+    "timer_extend": {
+      "name": "Add time to a timer",
+      "description": "Adds time to a running timer (1 minute by default): by name or id, otherwise the next one to end. A ringing timer cannot be extended.",
+      "fields": {
+        "duration": {
+          "name": "Time added",
+          "description": "1 second to 1 hour (default 1 minute)."
+        },
+        "name": {
+          "name": "Name",
+          "description": "The name given at start (empty: the timer without a name)."
+        },
+        "id": {
+          "name": "Id",
+          "description": "The id from the Timers sensor, e.g. t3."
         }
       }
     }

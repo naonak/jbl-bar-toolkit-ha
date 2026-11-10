@@ -89,3 +89,24 @@ timer_cancel:
     all:
       selector:
         boolean:
+
+timer_extend:
+  target:
+    entity:
+      integration: jbl_bar_91
+      domain: media_player
+  fields:
+    duration:
+      example: "00:01:00"
+      default:
+        minutes: 1
+      selector:
+        duration:
+    name:
+      example: "Pizza"
+      selector:
+        text:
+    id:
+      example: "t3"
+      selector:
+        text:

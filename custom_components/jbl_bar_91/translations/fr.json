@@ -228,6 +228,15 @@
     },
     "timer_unsupported": {
       "message": "La télécommande installée sur la barre n'a pas encore de minuteurs. Mettez à jour JBL Bar Toolkit sur la barre."
+    },
+    "timer_extend_duration": {
+      "message": "Le temps ajouté va de 1 seconde à 1 heure."
+    },
+    "timer_none_running": {
+      "message": "Aucun minuteur n'est en cours."
+    },
+    "timer_extend_unsupported": {
+      "message": "La télécommande installée sur la barre ne sait pas encore ajouter du temps à un minuteur. Mettez à jour JBL Bar Toolkit sur la barre."
     }
   },
   "services": {
@@ -312,6 +321,24 @@
         "all": {
           "name": "Tous",
           "description": "Arrêter tous les minuteurs."
+        }
+      }
+    },
+    "timer_extend": {
+      "name": "Ajouter du temps à un minuteur",
+      "description": "Ajoute du temps à un minuteur en cours (1 minute par défaut) : par nom ou identifiant, sinon au prochain à se terminer. Un minuteur qui sonne ne peut pas être prolongé.",
+      "fields": {
+        "duration": {
+          "name": "Temps ajouté",
+          "description": "De 1 seconde à 1 heure (1 minute par défaut)."
+        },
+        "name": {
+          "name": "Nom",
+          "description": "Le nom donné au lancement (vide : le minuteur sans nom)."
+        },
+        "id": {
+          "name": "Identifiant",
+          "description": "L'identifiant donné par le capteur Minuteurs, par exemple t3."
         }
       }
     }
