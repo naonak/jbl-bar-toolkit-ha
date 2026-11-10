@@ -118,18 +118,12 @@ With a toolkit remote that has timers (`bar91.timer`, November 2026), the bar ca
   - **Timer ringing**: on while one rings; handy to tell a phone too.
 
 **Dashboard template.** [`dashboards/timers-card.yaml`](dashboards/timers-card.yaml) is a card with:
-- the running timers;
-- the next timer as a countdown;
+- the running timers, with their end time and the time left, or *ringing*;
 - 1/5/10/15-minute buttons;
 - a custom timer (name, minutes, sound, time left);
-- *Stop all timers*.
+- *Stop all timers*, with a confirmation.
 
-The custom timer needs the helpers and the script from [`dashboards/timers-package.yaml`](dashboards/timers-package.yaml), loaded as a [package](https://www.home-assistant.io/docs/configuration/packages/). Entity ids follow Home Assistant's language. In French, they are:
-- `sensor.jbl_bar_9_1_minuteurs`;
-- `sensor.jbl_bar_9_1_prochain_minuteur`;
-- `binary_sensor.jbl_bar_9_1_minuteur_qui_sonne`.
-
-Adjust the card if yours differ (Settings > Entities).
+It needs the helpers and scripts from [`dashboards/timers-package.yaml`](dashboards/timers-package.yaml), loaded as a [package](https://www.home-assistant.io/docs/configuration/packages/). Neither names an entity of the bar: they find it with `integration_entities('jbl_bar_91')`, so they work whatever Home Assistant's language and the bar's entity ids. With several bars, they use the first one.
 
 ## How it behaves
 
@@ -161,7 +155,7 @@ Intégration Home Assistant pour la **JBL Bar 9.1**, via la télécommande web l
 
 **Messages sur l'écran.** Les services `jbl_bar_91.display_message` et `jbl_bar_91.display_cancel` affichent un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. Le message accepte 31 caractères ; il est converti en majuscules sans accent. On peut le répéter (`repeat`), l'afficher pendant une durée (`duration`) ou jusqu'à annulation (`forever`). Un message avec le même `id` remplace le précédent : « Frigo fermé » remplace ainsi « Frigo ouvert ». Des messages d'`id` différents s'affichent à tour de rôle, passage par passage, chacun avec ses propres répétitions, sa durée ou son « jusqu'à annulation ».
 
-**Minuteurs.** `jbl_bar_91.timer_start` lance un minuteur sur la barre (durée, nom, temps restant affiché, son à la fin, volume minimum, durée de sonnerie). `jbl_bar_91.timer_cancel` l'arrête par nom, par identifiant ou tous. À la fin, `TIME'S UP` et le nom défilent jusqu'à l'appui sur une touche de la télécommande JBL. Les entités *Minuteurs*, *Prochain minuteur* (compte à rebours) et *Minuteur qui sonne* servent au suivi. Un modèle de tableau de bord est fourni dans `dashboards/` (identifiants anglais ; en français : `sensor.jbl_bar_9_1_minuteurs`, `sensor.jbl_bar_9_1_prochain_minuteur`, `binary_sensor.jbl_bar_9_1_minuteur_qui_sonne`). Exemple ci-dessus. L'entité de notification *Écran* (`notify.jbl_bar_9_1_ecran`) sert de cible à `notify.send_message` : chaque notification passe deux fois, et le titre est placé devant le message s'il tient dans les 31 caractères. Elle peut entrer dans un groupe de notifications, avec votre téléphone par exemple.
+**Minuteurs.** `jbl_bar_91.timer_start` lance un minuteur sur la barre (durée, nom, temps restant affiché, son à la fin, volume minimum, durée de sonnerie). `jbl_bar_91.timer_cancel` l'arrête par nom, par identifiant ou tous. À la fin, `TIME'S UP` et le nom défilent jusqu'à l'appui sur une touche de la télécommande JBL. Les entités *Minuteurs*, *Prochain minuteur* (compte à rebours) et *Minuteur qui sonne* servent au suivi. Un modèle de tableau de bord est fourni dans `dashboards/` : il trouve lui-même les entités de la barre, quelle que soit la langue. Exemple ci-dessus. L'entité de notification *Écran* (`notify.jbl_bar_9_1_ecran`) sert de cible à `notify.send_message` : chaque notification passe deux fois, et le titre est placé devant le message s'il tient dans les 31 caractères. Elle peut entrer dans un groupe de notifications, avec votre téléphone par exemple.
 
 ## License
 

@@ -1,17 +1,17 @@
-# JBL Bar Toolkit – timers: helpers and a script for the "Custom timer" part of
-# timers-card.yaml. Put this file in your packages folder, for example
+# JBL Bar Toolkit – timers: helpers and scripts for timers-card.yaml.
+# Put this file in your packages folder, for example
 # /config/packages/jbl_timers.yaml, with in configuration.yaml:
 #   homeassistant:
 #     packages: !include_dir_named packages
-# then restart Home Assistant. Entity ids are those of an English install;
-# see the README for other languages.
+# then restart Home Assistant. The scripts find the bar themselves: no entity
+# id to adapt, whatever Home Assistant's language.
 input_text:
   jbl_timer_name:
     name: Timer name
     max: 31
 input_number:
   jbl_timer_minutes:
-    name: Timer minutes
+    name: Minutes
     min: 1
     max: 120
     step: 1
@@ -19,7 +19,7 @@ input_number:
     mode: box
 input_select:
   jbl_timer_sound:
-    name: Timer sound
+    name: Sound at the end
     options:
       - Unless watching TV
       - Always
@@ -35,7 +35,8 @@ script:
     sequence:
       - action: jbl_bar_91.timer_start
         target:
-          entity_id: media_player.jbl_bar_9_1
+          entity_id: >-
+            {{ integration_entities('jbl_bar_91') | select('match', 'media_player[.]') | first }}
         data:
           duration:
             minutes: "{{ states('input_number.jbl_timer_minutes') | int(10) }}"
@@ -43,3 +44,31 @@ script:
           show_time_left: "{{ is_state('input_boolean.jbl_timer_show_time', 'on') }}"
           sound: >-
             {{ {'Unless watching TV': 'unless_tv', 'Always': 'always'}.get(states('input_select.jbl_timer_sound'), 'off') }}
+  jbl_timer_quick:
+    alias: Quick timer
+    icon: mdi:timer-outline
+    fields:
+      minutes:
+        name: Minutes
+        required: true
+        selector:
+          number: {min: 1, max: 720}
+    sequence:
+      - action: jbl_bar_91.timer_start
+        target:
+          entity_id: >-
+            {{ integration_entities('jbl_bar_91') | select('match', 'media_player[.]') | first }}
+        data:
+          duration:
+            minutes: "{{ minutes | int(1) }}"
+          sound: unless_tv
+  jbl_timer_stop_all:
+    alias: Stop all timers
+    icon: mdi:timer-off-outline
+    sequence:
+      - action: jbl_bar_91.timer_cancel
+        target:
+          entity_id: >-
+            {{ integration_entities('jbl_bar_91') | select('match', 'media_player[.]') | first }}
+        data:
+          all: true

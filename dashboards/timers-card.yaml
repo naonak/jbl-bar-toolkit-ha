@@ -1,23 +1,32 @@
-# JBL Bar Toolkit – timers card. In a dashboard: Edit > Add card > Manual,
-# then paste this. The "Custom timer" part needs timers-package.yaml.
-# Entity ids are those of an English install; see the README for other languages.
+# JBL Bar Toolkit – timers card.
+# In a dashboard: Edit > Add card > Manual, then paste.
+# It needs the package timers-package.yaml. It finds the bar's entities itself:
+# no entity id to adapt, whatever Home Assistant's language.
 type: vertical-stack
 cards:
   - type: markdown
     title: Timers
-    content: >-
-      {% set timers = state_attr('sensor.jbl_bar_9_1_timers', 'timers') or [] %}
-      {% if timers | count == 0 %}No timer running.{% endif %}
-      {% for t in timers %}
-      - **{{ t.name or 'Timer' }}**: {% if t.ringing %}🔔 ringing, press any key on the JBL remote{% else %}ends at {{ as_timestamp(t.ends_at) | timestamp_custom('%H:%M:%S') }}{% endif %}
-      {% endfor %}
-  - type: entities
-    entities:
-      - entity: sensor.jbl_bar_9_1_next_timer
-        name: Next timer
-        format: relative
-      - entity: binary_sensor.jbl_bar_9_1_timer_ringing
-        name: Ringing
+    content: |
+      {%- set source = expand(integration_entities('jbl_bar_91'))
+         | selectattr('attributes.timers', 'defined') | list %}
+      {%- if source | count == 0 %}
+      ⚠️ No *Timers* entity: this needs integration 0.7.0 and a bar remote
+      with timers, then a reload of the integration.
+      {%- else %}
+      {%- set timers = source[0].attributes.timers %}
+      {%- if timers | count == 0 %}
+      No timer running.
+      {%- endif %}
+      {%- for t in timers %}
+      - **{{ t.name or 'Timer' }}**:
+        {%- if t.ringing %} 🔔 ringing, press any key on the JBL remote
+        {%- elif t.ends_at %}
+        {%- set left = ((as_timestamp(t.ends_at) - as_timestamp(now())) / 60) | round(0, 'ceil') | int %}
+        ends at {{ as_timestamp(t.ends_at) | timestamp_custom('%H:%M') }}
+        ({{ 'less than a minute' if left < 1 else 'in ' ~ left ~ ' min' }})
+        {%- endif %}
+      {%- endfor %}
+      {%- endif %}
   - type: grid
     columns: 4
     square: false
@@ -27,45 +36,29 @@ cards:
         icon: mdi:timer-outline
         tap_action:
           action: perform-action
-          perform_action: jbl_bar_91.timer_start
-          target:
-            entity_id: media_player.jbl_bar_9_1
-          data:
-            duration: {minutes: 1}
-            sound: unless_tv
+          perform_action: script.jbl_timer_quick
+          data: {minutes: 1}
       - type: button
         name: 5 min
         icon: mdi:timer-outline
         tap_action:
           action: perform-action
-          perform_action: jbl_bar_91.timer_start
-          target:
-            entity_id: media_player.jbl_bar_9_1
-          data:
-            duration: {minutes: 5}
-            sound: unless_tv
+          perform_action: script.jbl_timer_quick
+          data: {minutes: 5}
       - type: button
         name: 10 min
         icon: mdi:timer-outline
         tap_action:
           action: perform-action
-          perform_action: jbl_bar_91.timer_start
-          target:
-            entity_id: media_player.jbl_bar_9_1
-          data:
-            duration: {minutes: 10}
-            sound: unless_tv
+          perform_action: script.jbl_timer_quick
+          data: {minutes: 10}
       - type: button
         name: 15 min
         icon: mdi:timer-outline
         tap_action:
           action: perform-action
-          perform_action: jbl_bar_91.timer_start
-          target:
-            entity_id: media_player.jbl_bar_9_1
-          data:
-            duration: {minutes: 15}
-            sound: unless_tv
+          perform_action: script.jbl_timer_quick
+          data: {minutes: 15}
   - type: entities
     title: Custom timer
     entities:
@@ -85,10 +78,6 @@ cards:
     icon: mdi:timer-off-outline
     tap_action:
       action: perform-action
-      perform_action: jbl_bar_91.timer_cancel
-      target:
-        entity_id: media_player.jbl_bar_9_1
-      data:
-        all: true
+      perform_action: script.jbl_timer_stop_all
       confirmation:
-        text: Stop every timer?
+        text: Stop all timers?
