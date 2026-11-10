@@ -1,0 +1,94 @@
+# JBL Bar Toolkit – timers card. In a dashboard: Edit > Add card > Manual,
+# then paste this. The "Custom timer" part needs timers-package.yaml.
+# Entity ids are those of an English install; see the README for other languages.
+type: vertical-stack
+cards:
+  - type: markdown
+    title: Timers
+    content: >-
+      {% set timers = state_attr('sensor.jbl_bar_9_1_timers', 'timers') or [] %}
+      {% if timers | count == 0 %}No timer running.{% endif %}
+      {% for t in timers %}
+      - **{{ t.name or 'Timer' }}**: {% if t.ringing %}🔔 ringing, press any key on the JBL remote{% else %}ends at {{ as_timestamp(t.ends_at) | timestamp_custom('%H:%M:%S') }}{% endif %}
+      {% endfor %}
+  - type: entities
+    entities:
+      - entity: sensor.jbl_bar_9_1_next_timer
+        name: Next timer
+        format: relative
+      - entity: binary_sensor.jbl_bar_9_1_timer_ringing
+        name: Ringing
+  - type: grid
+    columns: 4
+    square: false
+    cards:
+      - type: button
+        name: 1 min
+        icon: mdi:timer-outline
+        tap_action:
+          action: perform-action
+          perform_action: jbl_bar_91.timer_start
+          target:
+            entity_id: media_player.jbl_bar_9_1
+          data:
+            duration: {minutes: 1}
+            sound: unless_tv
+      - type: button
+        name: 5 min
+        icon: mdi:timer-outline
+        tap_action:
+          action: perform-action
+          perform_action: jbl_bar_91.timer_start
+          target:
+            entity_id: media_player.jbl_bar_9_1
+          data:
+            duration: {minutes: 5}
+            sound: unless_tv
+      - type: button
+        name: 10 min
+        icon: mdi:timer-outline
+        tap_action:
+          action: perform-action
+          perform_action: jbl_bar_91.timer_start
+          target:
+            entity_id: media_player.jbl_bar_9_1
+          data:
+            duration: {minutes: 10}
+            sound: unless_tv
+      - type: button
+        name: 15 min
+        icon: mdi:timer-outline
+        tap_action:
+          action: perform-action
+          perform_action: jbl_bar_91.timer_start
+          target:
+            entity_id: media_player.jbl_bar_9_1
+          data:
+            duration: {minutes: 15}
+            sound: unless_tv
+  - type: entities
+    title: Custom timer
+    entities:
+      - input_text.jbl_timer_name
+      - input_number.jbl_timer_minutes
+      - input_select.jbl_timer_sound
+      - input_boolean.jbl_timer_show_time
+      - type: button
+        name: Start
+        icon: mdi:timer-play-outline
+        action_name: Start
+        tap_action:
+          action: perform-action
+          perform_action: script.jbl_timer_start
+  - type: button
+    name: Stop all timers
+    icon: mdi:timer-off-outline
+    tap_action:
+      action: perform-action
+      perform_action: jbl_bar_91.timer_cancel
+      target:
+        entity_id: media_player.jbl_bar_9_1
+      data:
+        all: true
+      confirmation:
+        text: Stop every timer?

@@ -1,0 +1,45 @@
+# JBL Bar Toolkit – timers: helpers and a script for the "Custom timer" part of
+# timers-card.yaml. Put this file in your packages folder, for example
+# /config/packages/jbl_timers.yaml, with in configuration.yaml:
+#   homeassistant:
+#     packages: !include_dir_named packages
+# then restart Home Assistant. Entity ids are those of an English install;
+# see the README for other languages.
+input_text:
+  jbl_timer_name:
+    name: Timer name
+    max: 31
+input_number:
+  jbl_timer_minutes:
+    name: Timer minutes
+    min: 1
+    max: 120
+    step: 1
+    initial: 10
+    mode: box
+input_select:
+  jbl_timer_sound:
+    name: Timer sound
+    options:
+      - Unless watching TV
+      - Always
+      - "Off"
+    initial: Unless watching TV
+input_boolean:
+  jbl_timer_show_time:
+    name: Show the time left on the bar
+script:
+  jbl_timer_start:
+    alias: Start the custom timer
+    icon: mdi:timer-play-outline
+    sequence:
+      - action: jbl_bar_91.timer_start
+        target:
+          entity_id: media_player.jbl_bar_9_1
+        data:
+          duration:
+            minutes: "{{ states('input_number.jbl_timer_minutes') | int(10) }}"
+          name: "{{ states('input_text.jbl_timer_name') }}"
+          show_time_left: "{{ is_state('input_boolean.jbl_timer_show_time', 'on') }}"
+          sound: >-
+            {{ {'Unless watching TV': 'unless_tv', 'Always': 'always'}.get(states('input_select.jbl_timer_sound'), 'off') }}

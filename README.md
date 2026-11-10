@@ -99,6 +99,38 @@ data:
   message: "Colis livré"
 ``` Details: [toolkit docs](https://github.com/kisinga/jbl-bar-toolkit/blob/main/docs/DISPLAY_MESSAGES.md).
 
+## Timers
+
+With a toolkit remote that has timers (`bar91.timer`, November 2026), the bar can be a kitchen timer, driven from Home Assistant.
+
+- `jbl_bar_91.timer_start` starts a timer. It takes `duration` (1 s to 12 h, required) and, optionally:
+  - `name` (e.g. `Pizza`);
+  - `show_time_left`: on the bar, second by second when it is the only timer, `PIZZA 4'34` once a minute when several run;
+  - `sound`: `off`, `unless_tv` (not while the bar plays TV, optical or HDMI) or `always`;
+  - `sound_volume` (at least, 1–30, default 10);
+  - `ring_for` (default 30 s).
+
+  When the time is up, `TIME'S UP PIZZA` scrolls on the display, on or in standby, until any key on the JBL remote is pressed (10 minutes at most). With a sound, the bar plays a chime through its Chromecast for `ring_for`, then returns to its volume, source or standby.
+- `jbl_bar_91.timer_cancel` stops a timer by `name`, by `id`, or `all: true`.
+- Entities:
+  - **Timers**: the number of timers, with each one in the `timers` attribute (`id`, `name`, `ends_at`, `ringing`, `countdown`, `sound`);
+  - **Next timer**: a timestamp, so dashboards show it as a countdown;
+  - **Timer ringing**: on while one rings; handy to tell a phone too.
+
+**Dashboard template.** [`dashboards/timers-card.yaml`](dashboards/timers-card.yaml) is a card with:
+- the running timers;
+- the next timer as a countdown;
+- 1/5/10/15-minute buttons;
+- a custom timer (name, minutes, sound, time left);
+- *Stop all timers*.
+
+The custom timer needs the helpers and the script from [`dashboards/timers-package.yaml`](dashboards/timers-package.yaml), loaded as a [package](https://www.home-assistant.io/docs/configuration/packages/). Entity ids follow Home Assistant's language. In French, they are:
+- `sensor.jbl_bar_9_1_minuteurs`;
+- `sensor.jbl_bar_9_1_prochain_minuteur`;
+- `binary_sensor.jbl_bar_9_1_minuteur_qui_sonne`.
+
+Adjust the card if yours differ (Settings > Entities).
+
 ## How it behaves
 
 - **Live updates.** While the bar is on, the integration listens to the remote's event stream, so changes from the physical remote or the web page appear immediately. The stream makes the remote sample the bar every second, so it is closed in standby; a light state request every 15 s then detects the wake.
@@ -127,7 +159,9 @@ Tests run Home Assistant against a fake remote that enforces the real API rules 
 
 Intégration Home Assistant pour la **JBL Bar 9.1**, via la télécommande web locale de [kisinga/jbl-bar-toolkit](https://github.com/kisinga/jbl-bar-toolkit) (dépôt anciennement `naonak/jbl-bar-9.1-ha` : mettez à jour l'URL du dépôt personnalisé dans HACS, les entités ne changent pas). Installez d'abord cette télécommande sur la barre, avec un `allowed_cidr` qui inclut l'adresse de Home Assistant. Ajoutez ensuite ce dépôt dans HACS (*Dépôts personnalisés*, catégorie *Intégration*), installez-le, redémarrez, puis ajoutez l'intégration en saisissant l'IP de la barre. Seule la Bar 9.1 est prise en charge : l'intégration vérifie le modèle annoncé par la télécommande et refuse une autre barre. L'interface est traduite en français.
 
-**Messages sur l'écran.** Les services `jbl_bar_91.display_message` et `jbl_bar_91.display_cancel` affichent un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. Le message accepte 31 caractères ; il est converti en majuscules sans accent. On peut le répéter (`repeat`), l'afficher pendant une durée (`duration`) ou jusqu'à annulation (`forever`). Un message avec le même `id` remplace le précédent : « Frigo fermé » remplace ainsi « Frigo ouvert ». Des messages d'`id` différents s'affichent à tour de rôle, passage par passage, chacun avec ses propres répétitions, sa durée ou son « jusqu'à annulation ». Exemple ci-dessus. L'entité de notification *Écran* (`notify.jbl_bar_9_1_ecran`) sert de cible à `notify.send_message` : chaque notification passe deux fois, et le titre est placé devant le message s'il tient dans les 31 caractères. Elle peut entrer dans un groupe de notifications, avec votre téléphone par exemple.
+**Messages sur l'écran.** Les services `jbl_bar_91.display_message` et `jbl_bar_91.display_cancel` affichent un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. Le message accepte 31 caractères ; il est converti en majuscules sans accent. On peut le répéter (`repeat`), l'afficher pendant une durée (`duration`) ou jusqu'à annulation (`forever`). Un message avec le même `id` remplace le précédent : « Frigo fermé » remplace ainsi « Frigo ouvert ». Des messages d'`id` différents s'affichent à tour de rôle, passage par passage, chacun avec ses propres répétitions, sa durée ou son « jusqu'à annulation ».
+
+**Minuteurs.** `jbl_bar_91.timer_start` lance un minuteur sur la barre (durée, nom, temps restant affiché, son à la fin, volume minimum, durée de sonnerie). `jbl_bar_91.timer_cancel` l'arrête par nom, par identifiant ou tous. À la fin, `TIME'S UP` et le nom défilent jusqu'à l'appui sur une touche de la télécommande JBL. Les entités *Minuteurs*, *Prochain minuteur* (compte à rebours) et *Minuteur qui sonne* servent au suivi. Un modèle de tableau de bord est fourni dans `dashboards/` (identifiants anglais ; en français : `sensor.jbl_bar_9_1_minuteurs`, `sensor.jbl_bar_9_1_prochain_minuteur`, `binary_sensor.jbl_bar_9_1_minuteur_qui_sonne`). Exemple ci-dessus. L'entité de notification *Écran* (`notify.jbl_bar_9_1_ecran`) sert de cible à `notify.send_message` : chaque notification passe deux fois, et le titre est placé devant le message s'il tient dans les 31 caractères. Elle peut entrer dans un groupe de notifications, avec votre téléphone par exemple.
 
 ## License
 

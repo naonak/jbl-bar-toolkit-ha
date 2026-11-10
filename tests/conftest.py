@@ -53,6 +53,8 @@ class FakeRemote:
         self.bass_offset: float | None = 0.0  # None: remote without the bass offset extension
         self.remembered_mode: str | None = None  # set when smart_mode_memory is on
         self.display = True  # False: remote without the display-message extension
+        self.timers: list[dict] | None = []  # None: remote without timers
+        self.timer_log: list[tuple[str, dict | None]] = []
         self.display_log: list[tuple[str, dict | None]] = []
         self.streams = 0
         self.changed = asyncio.Condition()
@@ -84,8 +86,11 @@ class FakeRemote:
             "system": {"cpu_percent": 12.5, "temperature_c": 51.0,
                        "memory": {"total_bytes": 400, "used_bytes": 100, "available_bytes": 300}},
             "wifi": {"signal_dbm": -50},
-            **({"extensions": {"bar91.bass-offset": {"offset_db": self.bass_offset, "status": "active" if self.bass_offset else "off"}}}
-               if self.bass_offset is not None else {}),
+            **({"extensions": {
+                **({"bar91.bass-offset": {"offset_db": self.bass_offset, "status": "active" if self.bass_offset else "off"}}
+                   if self.bass_offset is not None else {}),
+                **({"bar91.timer": {"timers": [dict(t) for t in self.timers]}} if self.timers is not None else {}),
+            }} if self.bass_offset is not None or self.timers is not None else {}),
             **({"automation": {"enabled": True, "engine": "go", "status": "IDLE", "remembered_mode": self.remembered_mode}}
                if self.remembered_mode else {}),
         }
@@ -148,6 +153,20 @@ class FakeRemote:
                 return web.json_response({"error": "bass offset must be -3 to 3 dB in 0.5 dB steps", "state": self.state()}, status=409)
             self.bass_offset = float(db)
             await self.notify()
+            return web.json_response(self.state())
+        if a.startswith("bar91.timer."):
+            params = req.get("parameters") or {}
+            if self.timers is None:
+                return web.json_response({"error": "unknown control", "state": self.state()}, status=409)
+            self.timer_log.append((a.rsplit(".", 1)[1], params))
+            if a.endswith(".start"):
+                name = (params.get("text") or "").upper()
+                if any(t["text"] == name for t in self.timers):
+                    return web.json_response({"error": "a timer named %s is already running" % name, "state": self.state()}, status=409)
+                self.timers.append({"id": "t%d" % (len(self.timer_log)), "text": name, "countdown": bool(params.get("countdown")),
+                                    "sound": params.get("sound", "off"), "remaining_ms": params["duration_s"] * 1000, "ringing": False})
+            else:
+                self.timers = [t for t in self.timers if t["id"] != params.get("id")]
             return web.json_response(self.state())
         if a.startswith("bar91.display-message."):
             params = req.get("parameters")

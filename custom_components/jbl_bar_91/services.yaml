@@ -36,3 +36,56 @@ display_cancel:
       example: "fridge"
       selector:
         text:
+timer_start:
+  target:
+    entity:
+      integration: jbl_bar_91
+      domain: media_player
+  fields:
+    duration:
+      required: true
+      example: "00:10:00"
+      selector:
+        duration:
+    name:
+      example: "Pizza"
+      selector:
+        text:
+    show_time_left:
+      selector:
+        boolean:
+    sound:
+      default: "off"
+      selector:
+        select:
+          options:
+            - "off"
+            - "unless_tv"
+            - "always"
+    sound_volume:
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 30
+          mode: slider
+    ring_for:
+      selector:
+        duration:
+timer_cancel:
+  target:
+    entity:
+      integration: jbl_bar_91
+      domain: media_player
+  fields:
+    name:
+      example: "Pizza"
+      selector:
+        text:
+    id:
+      example: "t3"
+      selector:
+        text:
+    all:
+      selector:
+        boolean:

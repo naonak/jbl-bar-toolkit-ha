@@ -93,12 +93,15 @@ class JblBarEntity(CoordinatorEntity[JblBarCoordinator]):
 
     async def display_action(self, action: str, parameters: dict[str, Any] | None) -> None:
         """Send a front-display message action (remote extension bar91.display-message)."""
+        await self.extension_action(DISPLAY_MESSAGE, action, parameters, "display_unsupported")
+
+    async def extension_action(self, extension: str, action: str, parameters: dict[str, Any] | None, unsupported: str) -> None:
+        """Send an extension action; a remote without the extension is reported with the unsupported message."""
         try:
-            await self.coordinator.async_action(f"{DISPLAY_MESSAGE}.{action}", parameters=parameters)
+            await self.coordinator.async_action(f"{extension}.{action}", parameters=parameters)
         except HomeAssistantError as err:
             if (err.translation_placeholders or {}).get("error") == "unknown control":
-                # Remote installed before display messages.
-                raise HomeAssistantError(translation_domain=DOMAIN, translation_key="display_unsupported") from err
+                raise HomeAssistantError(translation_domain=DOMAIN, translation_key=unsupported) from err
             raise
 
     @property

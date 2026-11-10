@@ -558,3 +558,82 @@ async def test_display_notify_needs_a_recent_remote(hass: HomeAssistant, remote)
     with pytest.raises(HomeAssistantError) as err:
         await hass.services.async_call("notify", "send_message", {"entity_id": "notify.jbl_bar_9_1_display", "message": "X"}, blocking=True)
     assert err.value.translation_key == "display_unsupported"
+
+
+async def test_timer_services(hass: HomeAssistant, remote) -> None:
+    """timer_start sends the remote's parameters; timer_cancel finds a timer by name, id or all."""
+    await setup(hass, remote)
+    await call(hass, DOMAIN, "timer_start", MP, duration={"minutes": 10}, name="Pizza", show_time_left=True, sound="unless_tv")
+    await call(hass, DOMAIN, "timer_start", MP, duration={"seconds": 90})
+    await call(hass, DOMAIN, "timer_start", MP, duration={"minutes": 5}, name="Pâtes", sound="always", sound_volume=20, ring_for={"minutes": 1})
+    assert remote.timer_log == [
+        ("start", {"duration_s": 600, "text": "Pizza", "countdown": True, "sound": "unless_tv", "sound_volume": 10, "ring_s": 30}),
+        ("start", {"duration_s": 90, "sound": "off"}),
+        ("start", {"duration_s": 300, "text": "Pâtes", "sound": "always", "sound_volume": 20, "ring_s": 60}),
+    ]
+    await hass.async_block_till_done()
+    await call(hass, DOMAIN, "timer_cancel", MP, name="pizza")
+    assert remote.timer_log[-1] == ("cancel", {"id": "t1"})
+    await call(hass, DOMAIN, "timer_cancel", MP, id="t2")
+    assert remote.timer_log[-1] == ("cancel", {"id": "t2"})
+    await call(hass, DOMAIN, "timer_cancel", MP, all=True)
+    assert remote.timer_log[-1] == ("cancel", {"id": "t3"}) and remote.timers == []
+
+
+async def test_timer_service_errors(hass: HomeAssistant, remote) -> None:
+    await setup(hass, remote)
+    with pytest.raises(ServiceValidationError):
+        await call(hass, DOMAIN, "timer_start", MP, duration={"hours": 13})
+    with pytest.raises(ServiceValidationError):
+        await call(hass, DOMAIN, "timer_start", MP, duration={"minutes": 1}, sound="always", ring_for={"minutes": 6})
+    with pytest.raises(ServiceValidationError):
+        await call(hass, DOMAIN, "timer_cancel", MP, name="nothing")
+    with pytest.raises(ServiceValidationError):
+        await call(hass, DOMAIN, "timer_cancel", MP)
+    await call(hass, DOMAIN, "timer_start", MP, duration={"minutes": 1}, name="Pizza")
+    with pytest.raises(HomeAssistantError):  # the remote refuses a second PIZZA
+        await call(hass, DOMAIN, "timer_start", MP, duration={"minutes": 2}, name="pizza")
+
+
+async def test_timer_entities(hass: HomeAssistant, remote) -> None:
+    remote.timers = [
+        {"id": "t1", "text": "PIZZA", "countdown": True, "sound": "unless_tv", "remaining_ms": 600000, "ringing": False},
+        {"id": "t2", "text": "", "countdown": False, "sound": "off", "remaining_ms": 60000, "ringing": False},
+    ]
+    await setup(hass, remote)
+    timers = hass.states.get("sensor.jbl_bar_9_1_timers")
+    assert timers.state == "2"
+    names = [t["name"] for t in timers.attributes["timers"]]
+    assert names == ["", "PIZZA"]  # first to end first
+    nxt = hass.states.get("sensor.jbl_bar_9_1_next_timer")
+    assert nxt.attributes["id"] == "t2" and nxt.attributes.get("device_class") == "timestamp"
+    assert hass.states.get("binary_sensor.jbl_bar_9_1_timer_ringing").state == "off"
+    remote.timers[1]["ringing"], remote.timers[1]["remaining_ms"] = True, 0
+    coordinator = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    ringing = hass.states.get("binary_sensor.jbl_bar_9_1_timer_ringing")
+    assert ringing.state == "on" and ringing.attributes["names"] == [""]
+    assert hass.states.get("sensor.jbl_bar_9_1_next_timer").attributes["id"] == "t1"
+
+
+async def test_timer_entities_need_a_recent_remote(hass: HomeAssistant, remote) -> None:
+    remote.timers = None
+    await setup(hass, remote)
+    assert hass.states.get("sensor.jbl_bar_9_1_timers") is None
+    with pytest.raises(HomeAssistantError) as err:
+        await call(hass, DOMAIN, "timer_start", MP, duration={"minutes": 1})
+    assert err.value.translation_key == "timer_unsupported"
+
+
+def test_timer_clock_keeps_end_times_still() -> None:
+    from datetime import datetime, timedelta, timezone
+    from custom_components.jbl_bar_91.timers import TimerClock, fold_name
+
+    clock = TimerClock()
+    now = datetime(2026, 11, 10, 12, 0, 0, tzinfo=timezone.utc)
+    doc = {"extensions": {"bar91.timer": {"timers": [{"id": "t1", "remaining_ms": 60000}]}}}
+    first = clock.ends(doc, now)["t1"]
+    doc["extensions"]["bar91.timer"]["timers"][0]["remaining_ms"] = 58800  # 1.2 s later, 1.2 s less
+    assert clock.ends(doc, now + timedelta(milliseconds=1500))["t1"] == first
+    assert fold_name("  pâtes  à l'œuf ") == "PATES A L'OEUF"

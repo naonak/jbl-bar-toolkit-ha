@@ -155,6 +155,12 @@
           "off": "Off",
           "reset_needed": "Reset needed"
         }
+      },
+      "timers": {
+        "name": "Timers"
+      },
+      "next_timer": {
+        "name": "Next timer"
       }
     },
     "binary_sensor": {
@@ -166,6 +172,9 @@
       },
       "command_running": {
         "name": "Command running"
+      },
+      "timer_ringing": {
+        "name": "Timer ringing"
       }
     },
     "notify": {
@@ -204,6 +213,21 @@
     },
     "display_unsupported": {
       "message": "The browser remote on the soundbar does not show messages yet. Update the JBL Bar Toolkit on the bar."
+    },
+    "timer_duration": {
+      "message": "The duration goes from 1 second to 12 hours."
+    },
+    "timer_ring": {
+      "message": "The ringing time goes from 3 seconds to 5 minutes."
+    },
+    "timer_not_found": {
+      "message": "No timer named {name} is running."
+    },
+    "timer_which": {
+      "message": "Give the name or id of the timer, or choose all."
+    },
+    "timer_unsupported": {
+      "message": "The browser remote on the soundbar has no timers yet. Update the JBL Bar Toolkit on the bar."
     }
   },
   "services": {
@@ -240,6 +264,54 @@
         "id": {
           "name": "Id",
           "description": "Id of the message to stop. Empty: every message."
+        }
+      }
+    },
+    "timer_start": {
+      "name": "Start a timer",
+      "description": "Starts a timer on the soundbar. When the time is up, TIME'S UP and the name scroll on its display, on or in standby, until a key on the JBL remote is pressed (10 minutes at most). Names use letters, digits, space and - . ' only, and two timers cannot share a name.",
+      "fields": {
+        "duration": {
+          "name": "Duration",
+          "description": "1 second to 12 hours."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Optional, e.g. Pizza. Shown as PIZZA. Without a name the alarm reads TIME'S UP - PRESS ANY KEY; only one timer without a name at a time."
+        },
+        "show_time_left": {
+          "name": "Show the time left",
+          "description": "On the bar: second by second when it is the only timer, once a minute (PIZZA 4'34) when several run."
+        },
+        "sound": {
+          "name": "Sound at the end",
+          "description": "off; unless_tv: not while the bar plays TV, optical or HDMI, so a film is never cut; always. The bar plays a chime through its Chromecast, then returns to its volume, source or standby."
+        },
+        "sound_volume": {
+          "name": "Sound volume at least",
+          "description": "1 to 30 (default 10). The bar is unmuted and turned up to this volume if lower, never down."
+        },
+        "ring_for": {
+          "name": "Ring for",
+          "description": "How long the chime repeats (3 s to 5 min, default 30 s). A key on the JBL remote stops it."
+        }
+      }
+    },
+    "timer_cancel": {
+      "name": "Stop a timer",
+      "description": "Stops a timer, running or ringing: by name, by id, or all of them.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "The name given at start (empty: the timer without a name)."
+        },
+        "id": {
+          "name": "Id",
+          "description": "The id from the Timers sensor, e.g. t3."
+        },
+        "all": {
+          "name": "All",
+          "description": "Stop every timer."
         }
       }
     }

@@ -9,9 +9,11 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, Sen
 from homeassistant.const import PERCENTAGE, SIGNAL_STRENGTH_DECIBELS_MILLIWATT, EntityCategory, UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .coordinator import JblBarConfigEntry, JblBarCoordinator
 from .entity import JblBarEntity, eq_installed, setup_controls, smart_mode_memory
+from .timers import TimerClock, timers_installed
 
 
 def _memory(doc: dict[str, Any]) -> float | None:
@@ -101,6 +103,51 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
                     + (MEMORY_SENSORS if smart_mode_memory(entry.runtime_data.data) else [])
                     + (EQ_SENSORS if eq_installed(entry.runtime_data.data) else []))
     add(JblBarSensor(entry.runtime_data, description) for description in descriptions)
+    if timers_installed(entry.runtime_data.data):
+        add([JblBarTimers(entry.runtime_data, "timers"), JblBarNextTimer(entry.runtime_data, "next_timer")])
+
+
+def timer_clock(coordinator: JblBarCoordinator) -> TimerClock:
+    """One clock per bar, so that every timer entity shows the same end times."""
+    clock = getattr(coordinator, "timer_clock", None)
+    if clock is None:
+        clock = coordinator.timer_clock = TimerClock()
+    return clock
+
+
+class JblBarTimers(JblBarEntity, SensorEntity):
+    """How many timers run or ring; each one in the timers attribute (name, ends_at, ringing…)."""
+
+    _attr_icon = "mdi:timer-outline"
+
+    @property
+    def native_value(self) -> int:
+        return len(timer_clock(self.coordinator).describe(self.state_doc))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"timers": timer_clock(self.coordinator).describe(self.state_doc)}
+
+
+class JblBarNextTimer(JblBarEntity, SensorEntity):
+    """When the next running timer ends (dashboards show it as a countdown)."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_icon = "mdi:timer-sand"
+
+    def _next(self) -> dict[str, Any] | None:
+        running = [t for t in timer_clock(self.coordinator).describe(self.state_doc) if t["ends_at"]]
+        return running[0] if running else None
+
+    @property
+    def native_value(self) -> Any:
+        t = self._next()
+        return dt_util.parse_datetime(t["ends_at"]) if t else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        t = self._next()
+        return {"name": t["name"], "id": t["id"]} if t else {}
 
 
 class JblBarSensor(JblBarEntity, SensorEntity):

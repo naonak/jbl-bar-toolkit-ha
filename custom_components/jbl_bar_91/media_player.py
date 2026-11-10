@@ -18,6 +18,7 @@ from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, SOURCES, VOLUME_MAX
+from .timers import TIMER, TIMER_RING_DEFAULT, TIMER_SOUNDS, TIMER_VOLUME_DEFAULT, fold_name, timer_list
 from .coordinator import JblBarConfigEntry
 from .entity import JblBarEntity
 
@@ -49,6 +50,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
         "display_cancel",
         {vol.Optional("id"): vol.All(cv.string, vol.Match(r"^[a-z0-9_-]{1,32}$"))},
         "async_display_cancel",
+    )
+    # Timers on the front display (remote extension bar91.timer).
+    platform.async_register_entity_service(
+        "timer_start",
+        {
+            vol.Required("duration"): cv.positive_time_period,
+            vol.Optional("name"): vol.All(cv.string, vol.Length(max=64)),
+            vol.Optional("show_time_left"): cv.boolean,
+            vol.Optional("sound"): vol.In(TIMER_SOUNDS),
+            vol.Optional("sound_volume"): vol.All(vol.Coerce(int), vol.Range(min=1, max=30)),
+            vol.Optional("ring_for"): cv.positive_time_period,
+        },
+        "async_timer_start",
+    )
+    platform.async_register_entity_service(
+        "timer_cancel",
+        {
+            vol.Optional("name"): vol.All(cv.string, vol.Length(max=64)),
+            vol.Optional("id"): vol.All(cv.string, vol.Match(r"^t[0-9]{1,9}$")),
+            vol.Optional("all"): cv.boolean,
+        },
+        "async_timer_cancel",
     )
 
 
@@ -195,3 +218,49 @@ class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
     async def async_display_cancel(self, id: str | None = None) -> None:
         """Stop a message (by id), or every message."""
         await self.display_action("cancel", {"id": id} if id else None)
+
+    async def async_timer_start(
+        self,
+        duration: timedelta,
+        name: str | None = None,
+        show_time_left: bool | None = None,
+        sound: str | None = None,
+        sound_volume: int | None = None,
+        ring_for: timedelta | None = None,
+    ) -> None:
+        """Start a timer on the bar's front display."""
+        seconds = int(duration.total_seconds())
+        if not 1 <= seconds <= 43200:
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="timer_duration")
+        parameters: dict[str, Any] = {"duration_s": seconds}
+        if name and name.strip():
+            parameters["text"] = name
+        if show_time_left:
+            parameters["countdown"] = True
+        sound = sound or "off"
+        parameters["sound"] = sound
+        if sound != "off":
+            parameters["sound_volume"] = sound_volume or TIMER_VOLUME_DEFAULT
+            ring = int(ring_for.total_seconds()) if ring_for is not None else TIMER_RING_DEFAULT
+            if not 3 <= ring <= 300:
+                raise ServiceValidationError(translation_domain=DOMAIN, translation_key="timer_ring")
+            parameters["ring_s"] = ring
+        await self.extension_action(TIMER, "start", parameters, "timer_unsupported")
+
+    async def async_timer_cancel(self, name: str | None = None, id: str | None = None, all: bool | None = None) -> None:
+        """Stop a timer by name or id, or every timer."""
+        timers = timer_list(self.state_doc)
+        if all:
+            ids = [t["id"] for t in timers]
+        elif id:
+            ids = [id]
+        elif name is not None:
+            wanted = fold_name(name)
+            ids = [t["id"] for t in timers if (t.get("text") or "") == wanted]
+            if not ids:
+                raise ServiceValidationError(translation_domain=DOMAIN, translation_key="timer_not_found", translation_placeholders={"name": name})
+        else:
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="timer_which")
+        for timer_id in ids:
+            await self.extension_action(TIMER, "cancel", {"id": timer_id}, "timer_unsupported")
+
