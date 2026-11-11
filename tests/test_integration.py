@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC
 
 import pytest
+import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
@@ -519,9 +521,9 @@ async def test_display_message_validation(hass: HomeAssistant, remote) -> None:
         await call(hass, DOMAIN, "display_message", MP, message="A", repeat=2, forever=True)
     with pytest.raises(ServiceValidationError):
         await call(hass, DOMAIN, "display_message", MP, message="A", duration={"hours": 25})
-    with pytest.raises(Exception):  # schema: id format, repeat range
+    with pytest.raises(vol.Invalid):  # schema: id format, repeat range
         await call(hass, DOMAIN, "display_message", MP, message="A", id="Fridge Door")
-    with pytest.raises(Exception):
+    with pytest.raises(vol.Invalid):
         await call(hass, DOMAIN, "display_message", MP, message="A", repeat=100)
     assert remote.display_log == []
     # forever: false is the same as leaving it out.
@@ -629,11 +631,12 @@ async def test_timer_entities_need_a_recent_remote(hass: HomeAssistant, remote) 
 
 
 def test_timer_clock_keeps_end_times_still() -> None:
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
+
     from custom_components.jbl_bar_91.timers import TimerClock, fold_name
 
     clock = TimerClock()
-    now = datetime(2026, 11, 10, 12, 0, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 11, 10, 12, 0, 0, tzinfo=UTC)
     doc = {"extensions": {"bar91.timer": {"timers": [{"id": "t1", "remaining_ms": 60000}]}}}
     first = clock.ends(doc, now)["t1"]
     doc["extensions"]["bar91.timer"]["timers"][0]["remaining_ms"] = 58800  # 1.2 s later, 1.2 s less

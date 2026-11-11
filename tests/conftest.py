@@ -167,8 +167,8 @@ class FakeRemote:
             if a.endswith(".start"):
                 name = (params.get("text") or "").upper()
                 if any(t["text"] == name for t in self.timers):
-                    return web.json_response({"error": "a timer named %s is already running" % name, "state": self.state()}, status=409)
-                self.timers.append({"id": "t%d" % (len(self.timer_log)), "text": name, "countdown": bool(params.get("countdown")),
+                    return web.json_response({"error": f"a timer named {name} is already running", "state": self.state()}, status=409)
+                self.timers.append({"id": f"t{len(self.timer_log)}", "text": name, "countdown": bool(params.get("countdown")),
                                     "sound": params.get("sound", "off"), "remaining_ms": params["duration_s"] * 1000, "ringing": False})
             elif a.endswith(".extend"):
                 if not self.timer_extend:
