@@ -9,16 +9,18 @@ cards:
     entities:
       - type: conditional
         conditions:
-          - entity: sensor.jbl_timer_1
+          - condition: state
+            entity: sensor.jbl_timer_1
             state: unavailable
         row:
           type: text
           icon: mdi:timer-off-outline
-          name: No timer running.
-          text: ""
+          name: No timer running
+          text: "–"
       - type: conditional
         conditions:
-          - entity: sensor.jbl_timer_1
+          - condition: state
+            entity: sensor.jbl_timer_1
             state_not: unavailable
         row:
           type: button
@@ -30,7 +32,8 @@ cards:
             data: {slot: 1}
       - type: conditional
         conditions:
-          - entity: sensor.jbl_timer_2
+          - condition: state
+            entity: sensor.jbl_timer_2
             state_not: unavailable
         row:
           type: button
@@ -42,7 +45,8 @@ cards:
             data: {slot: 2}
       - type: conditional
         conditions:
-          - entity: sensor.jbl_timer_3
+          - condition: state
+            entity: sensor.jbl_timer_3
             state_not: unavailable
         row:
           type: button
@@ -54,7 +58,8 @@ cards:
             data: {slot: 3}
       - type: conditional
         conditions:
-          - entity: sensor.jbl_timer_4
+          - condition: state
+            entity: sensor.jbl_timer_4
             state_not: unavailable
         row:
           type: button

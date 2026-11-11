@@ -128,3 +128,21 @@ async def test_messages_card_and_scripts(hass: HomeAssistant, remote) -> None:
     await hass.async_block_till_done()
     text = Template(content, hass).async_render()
     assert "- **CALL GRANDMA**: showing, until cleared" in text and "- **WATER THE PLANTS** (plants): waiting, 3 times left" in text, text
+
+
+def test_card_rows_pass_the_frontend_checks() -> None:
+    """The dashboard refuses a whole card for one bad row: a text row needs a name and a text, both non-empty."""
+    def rows(node):
+        if isinstance(node, dict):
+            if node.get("type") == "text":
+                yield node
+            for value in node.values():
+                yield from rows(value)
+        elif isinstance(node, list):
+            for value in node:
+                yield from rows(value)
+
+    found = list(rows(load("timers-card.yaml")))
+    assert found
+    for row in found:
+        assert row.get("name") and row.get("text"), row
