@@ -102,14 +102,16 @@ async def test_card_and_scripts(hass: HomeAssistant, remote) -> None:
 
 
 async def test_messages_card_and_scripts(hass: HomeAssistant, remote) -> None:
-    """The messages card lists what the remote reports; the scripts send and clear, finding the bar themselves."""
+    """The messages card lists what the remote reports, one line each with Clear; the scripts find the bar."""
     remote.messages = []
     await setup(hass, remote)
+    content = next(c for c in load("messages-card.yaml")["cards"] if c["type"] == "markdown")["content"]
+    assert "messages package is missing" in Template(content, hass).async_render()
     for domain, config in load("messages-package.yaml").items():
         assert await async_setup_component(hass, domain, {domain: config})
     await hass.async_block_till_done()
-    content = load("messages-card.yaml")["cards"][0]["content"]
-    assert Template(content, hass).async_render().strip() == "No message on the bar."
+    assert Template(content, hass).async_render().strip() == ""
+    assert hass.states.get("sensor.jbl_message_1").state == "unavailable"
     for length, expect in [("Until cleared", {"forever": True}), ("3 times", {"repeat": 3}), ("1 hour", {"duration_s": 3600})]:
         await hass.services.async_call("input_text", "set_value", {"entity_id": "input_text.jbl_message_text", "value": "Call grandma"}, blocking=True)
         await hass.services.async_call("input_select", "select_option", {"entity_id": "input_select.jbl_message_length", "option": length}, blocking=True)
@@ -126,8 +128,14 @@ async def test_messages_card_and_scripts(hass: HomeAssistant, remote) -> None:
     coordinator = hass.config_entries.async_entries("jbl_bar_91")[0].runtime_data
     await coordinator.async_refresh()
     await hass.async_block_till_done()
-    text = Template(content, hass).async_render()
-    assert "- **CALL GRANDMA**: showing, until cleared" in text and "- **WATER THE PLANTS** (plants): waiting, 3 times left" in text, text
+    first, second = hass.states.get("sensor.jbl_message_1"), hass.states.get("sensor.jbl_message_2")
+    assert first.name == "CALL GRANDMA – showing, until cleared" and first.state == "showing", first
+    assert second.name == "WATER THE PLANTS (plants) – waiting, 3 times left" and second.attributes["message_id"] == "plants", second
+    assert hass.states.get("sensor.jbl_message_3").state == "unavailable"
+    await hass.services.async_call("script", "jbl_message_cancel_slot", {"slot": 2}, blocking=True)
+    assert remote.display_log[-1] == ("cancel", {"id": "plants"})
+    await hass.services.async_call("script", "jbl_message_cancel_slot", {"slot": 3}, blocking=True)  # an empty line: nothing
+    assert remote.display_log[-1] == ("cancel", {"id": "plants"})
 
 
 def test_card_rows_pass_the_frontend_checks() -> None:
@@ -142,7 +150,7 @@ def test_card_rows_pass_the_frontend_checks() -> None:
             for value in node:
                 yield from rows(value)
 
-    found = list(rows(load("timers-card.yaml")))
+    found = list(rows(load("timers-card.yaml"))) + list(rows(load("messages-card.yaml")))
     assert found
     for row in found:
         assert row.get("name") and row.get("text"), row

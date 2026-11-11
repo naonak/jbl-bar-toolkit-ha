@@ -4,28 +4,84 @@
 # itself: no entity id to adapt, whatever Home Assistant's language.
 type: vertical-stack
 cards:
-  - type: markdown
+  - type: entities
     title: Messages
+    entities:
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: sensor.jbl_message_1
+            state: unavailable
+        row:
+          type: text
+          icon: mdi:message-off-outline
+          name: No message on the bar
+          text: "–"
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: sensor.jbl_message_1
+            state_not: unavailable
+        row:
+          type: button
+          entity: sensor.jbl_message_1
+          action_name: Clear
+          tap_action:
+            action: perform-action
+            perform_action: script.jbl_message_cancel_slot
+            data: {slot: 1}
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: sensor.jbl_message_2
+            state_not: unavailable
+        row:
+          type: button
+          entity: sensor.jbl_message_2
+          action_name: Clear
+          tap_action:
+            action: perform-action
+            perform_action: script.jbl_message_cancel_slot
+            data: {slot: 2}
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: sensor.jbl_message_3
+            state_not: unavailable
+        row:
+          type: button
+          entity: sensor.jbl_message_3
+          action_name: Clear
+          tap_action:
+            action: perform-action
+            perform_action: script.jbl_message_cancel_slot
+            data: {slot: 3}
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: sensor.jbl_message_4
+            state_not: unavailable
+        row:
+          type: button
+          entity: sensor.jbl_message_4
+          action_name: Clear
+          tap_action:
+            action: perform-action
+            perform_action: script.jbl_message_cancel_slot
+            data: {slot: 4}
+  - type: markdown
+    show_empty: false
     content: |
       {%- set source = expand(integration_entities('jbl_bar_91'))
          | selectattr('attributes.messages', 'defined') | list %}
       {%- if source | count == 0 %}
       ⚠️ No *Messages* entity: this needs integration 0.9.0 and a bar remote
-      with the Messages panel.
-      {%- else %}
-      {%- set messages = source[0].attributes.messages %}
-      {%- if messages | count == 0 %}
-      No message on the bar.
-      {%- endif %}
-      {%- for m in messages %}
-      - **{{ m.text }}**{{ ' (' ~ m.name ~ ')' if m.name }}:
-        {%- if m.showing %} showing{% else %} waiting{% endif %},
-        {%- if m.mode == 'forever' %} until cleared
-        {%- elif m.mode == 'duration' and m.ends_at %} until {{ as_timestamp(m.ends_at) | timestamp_custom('%H:%M') }}
-        {%- elif m.passes_left == 1 %} last time
-        {%- else %} {{ m.passes_left }} times left
-        {%- endif %}
-      {%- endfor %}
+      with the Messages panel (reload the integration after updating the bar).
+      {%- elif states.sensor.jbl_message_1 is none %}
+      ⚠️ The messages package is missing: put messages-package.yaml in your
+      packages folder, then restart Home Assistant (see the README).
+      {%- elif source[0].attributes.messages | count > 4 %}
+      And {{ source[0].attributes.messages | count - 4 }} more: *Clear all messages* clears them too.
       {%- endif %}
   - type: entities
     title: Leave a message
@@ -41,15 +97,9 @@ cards:
           action: perform-action
           perform_action: script.jbl_message_send
   - type: grid
-    columns: 2
+    columns: 1
     square: false
     cards:
-      - type: button
-        name: Clear the unnamed message
-        icon: mdi:message-minus-outline
-        tap_action:
-          action: perform-action
-          perform_action: script.jbl_message_clear_unnamed
       - type: button
         name: Clear all messages
         icon: mdi:message-off-outline
