@@ -4,28 +4,79 @@
 # no entity id to adapt, whatever Home Assistant's language.
 type: vertical-stack
 cards:
-  - type: markdown
+  - type: entities
     title: Timers
+    entities:
+      - type: conditional
+        conditions:
+          - entity: sensor.jbl_timer_1
+            state: unavailable
+        row:
+          type: text
+          icon: mdi:timer-off-outline
+          name: No timer running.
+          text: ""
+      - type: conditional
+        conditions:
+          - entity: sensor.jbl_timer_1
+            state_not: unavailable
+        row:
+          type: button
+          entity: sensor.jbl_timer_1
+          action_name: Cancel
+          tap_action:
+            action: perform-action
+            perform_action: script.jbl_timer_cancel_slot
+            data: {slot: 1}
+      - type: conditional
+        conditions:
+          - entity: sensor.jbl_timer_2
+            state_not: unavailable
+        row:
+          type: button
+          entity: sensor.jbl_timer_2
+          action_name: Cancel
+          tap_action:
+            action: perform-action
+            perform_action: script.jbl_timer_cancel_slot
+            data: {slot: 2}
+      - type: conditional
+        conditions:
+          - entity: sensor.jbl_timer_3
+            state_not: unavailable
+        row:
+          type: button
+          entity: sensor.jbl_timer_3
+          action_name: Cancel
+          tap_action:
+            action: perform-action
+            perform_action: script.jbl_timer_cancel_slot
+            data: {slot: 3}
+      - type: conditional
+        conditions:
+          - entity: sensor.jbl_timer_4
+            state_not: unavailable
+        row:
+          type: button
+          entity: sensor.jbl_timer_4
+          action_name: Cancel
+          tap_action:
+            action: perform-action
+            perform_action: script.jbl_timer_cancel_slot
+            data: {slot: 4}
+  - type: markdown
+    show_empty: false
     content: |
       {%- set source = expand(integration_entities('jbl_bar_91'))
          | selectattr('attributes.timers', 'defined') | list %}
       {%- if source | count == 0 %}
       ⚠️ No *Timers* entity: this needs integration 0.7.0 and a bar remote
       with timers, then a reload of the integration.
-      {%- else %}
-      {%- set timers = source[0].attributes.timers %}
-      {%- if timers | count == 0 %}
-      No timer running.
-      {%- endif %}
-      {%- for t in timers %}
-      - **{{ t.name or 'Timer' }}**:
-        {%- if t.ringing %} 🔔 ringing, press any key on the JBL remote
-        {%- elif t.ends_at %}
-        {%- set left = ((as_timestamp(t.ends_at) - as_timestamp(now())) / 60) | round(0, 'ceil') | int %}
-        ends at {{ as_timestamp(t.ends_at) | timestamp_custom('%H:%M') }}
-        ({{ 'less than a minute' if left < 1 else 'in ' ~ left ~ ' min' }})
-        {%- endif %}
-      {%- endfor %}
+      {%- elif states.sensor.jbl_timer_1 is none %}
+      ⚠️ The timers package is missing: put timers-package.yaml in your
+      packages folder, then restart Home Assistant (see the README).
+      {%- elif source[0].attributes.timers | count > 4 %}
+      And {{ source[0].attributes.timers | count - 4 }} more: *Stop all timers* cancels them too.
       {%- endif %}
   - type: grid
     columns: 2

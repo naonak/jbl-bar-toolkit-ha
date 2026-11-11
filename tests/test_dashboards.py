@@ -23,7 +23,8 @@ def sent(remote, **expected) -> bool:
 
 
 def card_text(hass: HomeAssistant) -> str:
-    content = load("timers-card.yaml")["cards"][0]["content"]
+    """The markdown under the timers list: warnings and the timers beyond the four lines."""
+    content = next(c for c in load("timers-card.yaml")["cards"] if c["type"] == "markdown")["content"]
     return Template(content, hass).async_render()
 
 
@@ -40,12 +41,23 @@ async def test_card_without_timer_entities(hass: HomeAssistant, remote) -> None:
     assert "No *Timers* entity" in card_text(hass)
 
 
+async def test_card_without_package(hass: HomeAssistant, remote) -> None:
+    remote.timers = []
+    await setup(hass, remote)
+    assert "timers package is missing" in card_text(hass)
+
+
+def slot(hass: HomeAssistant, n: int):
+    return hass.states.get(f"sensor.jbl_timer_{n}")
+
+
 async def test_card_and_scripts(hass: HomeAssistant, remote) -> None:
     """Nothing in the card or package names an entity of the bar: they find it."""
     remote.timers = []
     await setup(hass, remote)
     await setup_package(hass)
-    assert card_text(hass).strip() == "No timer running."
+    assert card_text(hass).strip() == ""
+    assert [slot(hass, n).state for n in range(1, 5)] == ["unavailable"] * 4
 
     await hass.services.async_call("script", "jbl_timer_quick", {"minutes": 5}, blocking=True)
     assert sent(remote, duration_s=300, sound="unless_tv")
@@ -58,12 +70,33 @@ async def test_card_and_scripts(hass: HomeAssistant, remote) -> None:
     remote.timers[0]["ringing"], remote.timers[0]["remaining_ms"] = True, 0
     await coordinator.async_refresh()
     await hass.async_block_till_done()
-    text = card_text(hass)
-    assert "**Timer**: 🔔 ringing" in text and "ends at" in text, text
-    assert "in 10 min" in text, text
+    first, second = slot(hass, 1), slot(hass, 2)
+    assert first.name == "🔔 Timer – ringing" and first.attributes["icon"] == "mdi:bell-ring", first
+    assert second.name.startswith("PIZZA – ends at ") and second.name.endswith("(in 10 min)"), second.name
+    assert second.attributes["timer_id"] == "t2" and second.attributes["device_class"] == "timestamp"
+    assert slot(hass, 3).state == "unavailable"
 
     await hass.services.async_call("script", "jbl_timer_add_minute", {}, blocking=True)
     assert remote.timer_log[-1] == ("extend", {"id": "t2", "add_s": 60})  # the next one running (Pizza; the other rings)
+
+    # The Cancel button of a line stops that timer only.
+    await hass.services.async_call("script", "jbl_timer_cancel_slot", {"slot": 2}, blocking=True)
+    assert remote.timer_log[-1] == ("cancel", {"id": "t2"})
+    assert [t["id"] for t in remote.timers] == ["t1"]
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert slot(hass, 2).state == "unavailable"
+    await hass.services.async_call("script", "jbl_timer_cancel_slot", {"slot": 3}, blocking=True)  # an empty line: nothing
+    assert remote.timer_log[-1] == ("cancel", {"id": "t2"})
+
+    for name in ("Tea", "Eggs", "Rice", "Bread"):
+        await hass.services.async_call("input_text", "set_value", {"entity_id": "input_text.jbl_timer_name", "value": name}, blocking=True)
+        await hass.services.async_call("script", "jbl_timer_start", {}, blocking=True)
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert "And 1 more" in card_text(hass)
+    assert all(slot(hass, n).state != "unavailable" for n in range(1, 5))
+
     await hass.services.async_call("script", "jbl_timer_stop_all", {}, blocking=True)
     assert remote.timers == []
 

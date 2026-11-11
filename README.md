@@ -125,12 +125,12 @@ With a toolkit remote that has timers (`bar91.timer`, November 2026), the bar ca
   - **Timer ringing**: on while one rings; handy to tell a phone too.
 
 **Dashboard template.** [`dashboards/timers-card.yaml`](dashboards/timers-card.yaml) is a card with:
-- the running timers, with their end time and the time left, or *ringing*;
+- the running timers, one line each with its end time and the time left, or *ringing*, and a **Cancel** button that stops that timer only, at once;
 - 1/5/10/15-minute buttons;
 - a custom timer (name, minutes, sound, time left);
 - *+1 min* for the next timer, and *Stop all timers*, with a confirmation.
 
-It needs [`dashboards/timers-package.yaml`](dashboards/timers-package.yaml): see [Dashboard templates](#dashboard-templates).
+It needs [`dashboards/timers-package.yaml`](dashboards/timers-package.yaml): see [Dashboard templates](#dashboard-templates). The package adds `sensor.jbl_timer_1` to `sensor.jbl_timer_4`, the running timers in order (first to end first, a ringing one on top), and the script `script.jbl_timer_cancel_slot` that the Cancel buttons call; the card lists four timers, and says how many more run beyond them.
 
 ## Dashboard templates
 
@@ -138,7 +138,7 @@ Two ready-made cards, each with a *package*: a YAML file that adds the helpers (
 
 | Card | Package | Adds |
 | --- | --- | --- |
-| [`timers-card.yaml`](dashboards/timers-card.yaml) | [`timers-package.yaml`](dashboards/timers-package.yaml) | quick and custom timers, +1 min, stop all |
+| [`timers-card.yaml`](dashboards/timers-card.yaml) | [`timers-package.yaml`](dashboards/timers-package.yaml) | quick and custom timers, cancel one, +1 min, stop all |
 | [`messages-card.yaml`](dashboards/messages-card.yaml) | [`messages-package.yaml`](dashboards/messages-package.yaml) | the messages on the bar, leave one, clear them |
 
 Neither names an entity of the bar: they find it with `integration_entities('jbl_bar_91')`, so they work whatever Home Assistant's language and the bar's entity ids. With several bars, they use the first one.
@@ -168,7 +168,7 @@ Do not paste both into one file, and do not replace one with the other: each fil
 
 **4. Add the cards.** On a dashboard: Edit › Add card › *Manual*, then paste the contents of the card file. To show both in one card, put the `cards` of both under a single `vertical-stack`.
 
-If a card shows *Entity not found*, its package is not loaded: check the file is in `/config/packages`, the configuration check, then restart again. If it shows *No Timers entity* or *No Messages entity*, the integration or the toolkit remote on the bar is older than the feature.
+If a card shows *Entity not found*, or *The timers package is missing*, its package is not loaded: check the file is in `/config/packages`, the configuration check, then restart again. If it shows *No Timers entity* or *No Messages entity*, the integration or the toolkit remote on the bar is older than the feature.
 
 ## Restart
 
@@ -217,7 +217,7 @@ Intégration Home Assistant pour la **JBL Bar 9.1**, via la télécommande web l
 
 **Messages sur l'écran.** Les services `jbl_bar_91.display_message` et `jbl_bar_91.display_cancel` affichent un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. Le message accepte 31 caractères ; il est converti en majuscules sans accent. On peut le répéter (`repeat`), l'afficher pendant une durée (`duration`) ou jusqu'à annulation (`forever`). Un message avec le même `id` remplace le précédent : « Frigo fermé » remplace ainsi « Frigo ouvert ». Des messages d'`id` différents s'affichent à tour de rôle, passage par passage, chacun avec ses propres répétitions, sa durée ou son « jusqu'à annulation ». Un message sans `id` (y compris ceux de l'entité de notification) a l'identifiant `default` : `display_cancel` avec `id: default` l'efface, et sans `id` tous les messages (pas les minuteurs). Avec `clear_on_key: true`, n'importe quelle touche de la télécommande JBL efface le message, signe qu'il a été vu. Les boutons **Effacer le message sans nom** et **Effacer tous les messages** font de même, et le capteur **Messages** liste ceux en cours, avec une télécommande récente.
 
-**Minuteurs.** `jbl_bar_91.timer_start` lance un minuteur sur la barre (durée, nom, temps restant affiché, son à la fin, volume minimum, durée de sonnerie). `jbl_bar_91.timer_cancel` l'arrête par nom, par identifiant ou tous. `jbl_bar_91.timer_extend` ajoute du temps à un minuteur en cours (1 minute par défaut), par nom ou identifiant, sinon au prochain à se terminer. À la fin, `TIME'S UP` et le nom défilent jusqu'à l'appui sur une touche de la télécommande JBL. Les entités *Minuteurs*, *Prochain minuteur* (compte à rebours) et *Minuteur qui sonne* servent au suivi. Un modèle de tableau de bord est fourni dans `dashboards/` : il trouve lui-même les entités de la barre, quelle que soit la langue. Exemple ci-dessus. L'entité de notification *Écran* (`notify.jbl_bar_9_1_ecran`) sert de cible à `notify.send_message` : chaque notification passe deux fois, et le titre est placé devant le message s'il tient dans les 31 caractères. Elle peut entrer dans un groupe de notifications, avec votre téléphone par exemple.
+**Minuteurs.** `jbl_bar_91.timer_start` lance un minuteur sur la barre (durée, nom, temps restant affiché, son à la fin, volume minimum, durée de sonnerie). `jbl_bar_91.timer_cancel` l'arrête par nom, par identifiant ou tous. `jbl_bar_91.timer_extend` ajoute du temps à un minuteur en cours (1 minute par défaut), par nom ou identifiant, sinon au prochain à se terminer. À la fin, `TIME'S UP` et le nom défilent jusqu'à l'appui sur une touche de la télécommande JBL. Les entités *Minuteurs*, *Prochain minuteur* (compte à rebours) et *Minuteur qui sonne* servent au suivi. Un modèle de tableau de bord est fourni dans `dashboards/` : il trouve lui-même les entités de la barre, quelle que soit la langue. Chaque minuteur en cours y a sa ligne avec un bouton **Annuler**, sans confirmation, grâce aux capteurs `sensor.jbl_timer_1` à `_4` du package. Exemple ci-dessus. L'entité de notification *Écran* (`notify.jbl_bar_9_1_ecran`) sert de cible à `notify.send_message` : chaque notification passe deux fois, et le titre est placé devant le message s'il tient dans les 31 caractères. Elle peut entrer dans un groupe de notifications, avec votre téléphone par exemple.
 
 **Modèles de tableau de bord.** Chaque carte (`dashboards/timers-card.yaml`, `dashboards/messages-card.yaml`) a besoin de son *package* (`timers-package.yaml`, `messages-package.yaml`) :
 1. dans `configuration.yaml`, ajoutez une seule fois `packages: !include_dir_named packages` sous `homeassistant:`, puis créez le dossier `/config/packages` ;
