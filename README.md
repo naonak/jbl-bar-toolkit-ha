@@ -62,7 +62,7 @@ Two services show your own text on the bar's front display, on or in standby, wi
 - `jbl_bar_91.display_cancel` stops the message with `id`, or every message (timers are not affected). A message sent without an `id`, by `display_message` or the notify entity, has the id `default`: there is one at a time, and `id: default` clears it.
 - `clear_on_key: true` on `display_message` lets whoever reads the message clear it with any key on the JBL remote (toolkit remotes with the Messages panel). With `forever: true`, the message stays until it is seen.
 - The buttons **Clear unnamed message** and **Clear all messages** do the same from a dashboard or an automation.
-- **Dashboard template.** [`dashboards/messages-card.yaml`](dashboards/messages-card.yaml) lists the messages on the bar, leaves one (text, how long, clear with a key) and clears them, with the helpers and scripts of [`dashboards/messages-package.yaml`](dashboards/messages-package.yaml), loaded as a package like the timers one.
+- **Dashboard template.** [`dashboards/messages-card.yaml`](dashboards/messages-card.yaml) lists the messages on the bar, leaves one (text, how long, clear with a key) and clears them. It needs [`dashboards/messages-package.yaml`](dashboards/messages-package.yaml): see [Dashboard templates](#dashboard-templates).
 - With a toolkit remote that lists them (the Messages panel), the **Messages** sensor gives how many messages are on the display or waiting, and the `messages` attribute each one: `id`, `name` (empty for the unnamed one), `text` as shown, `mode` (`passes`, `duration` or `forever`), `passes_left`, `ends_at` and `showing`.
 
 The bar's own messages (volume, `HELLO` at wake-up…) come first: yours waits, then shows the interrupted pass again. A 1.5 s blank separates passes. Example, the fridge door:
@@ -101,7 +101,9 @@ target:
   entity_id: notify.jbl_bar_9_1_display
 data:
   message: "Colis livré"
-``` Details: [toolkit docs](https://github.com/kisinga/jbl-bar-toolkit/blob/main/docs/DISPLAY_MESSAGES.md).
+```
+
+Details: [toolkit docs](https://github.com/kisinga/jbl-bar-toolkit/blob/main/docs/DISPLAY_MESSAGES.md).
 
 ## Timers
 
@@ -128,7 +130,45 @@ With a toolkit remote that has timers (`bar91.timer`, November 2026), the bar ca
 - a custom timer (name, minutes, sound, time left);
 - *+1 min* for the next timer, and *Stop all timers*, with a confirmation.
 
-It needs the helpers and scripts from [`dashboards/timers-package.yaml`](dashboards/timers-package.yaml), loaded as a [package](https://www.home-assistant.io/docs/configuration/packages/). Neither names an entity of the bar: they find it with `integration_entities('jbl_bar_91')`, so they work whatever Home Assistant's language and the bar's entity ids. With several bars, they use the first one.
+It needs [`dashboards/timers-package.yaml`](dashboards/timers-package.yaml): see [Dashboard templates](#dashboard-templates).
+
+## Dashboard templates
+
+Two ready-made cards, each with a *package*: a YAML file that adds the helpers (text fields, lists, switches) and scripts its card uses.
+
+| Card | Package | Adds |
+| --- | --- | --- |
+| [`timers-card.yaml`](dashboards/timers-card.yaml) | [`timers-package.yaml`](dashboards/timers-package.yaml) | quick and custom timers, +1 min, stop all |
+| [`messages-card.yaml`](dashboards/messages-card.yaml) | [`messages-package.yaml`](dashboards/messages-package.yaml) | the messages on the bar, leave one, clear them |
+
+Neither names an entity of the bar: they find it with `integration_entities('jbl_bar_91')`, so they work whatever Home Assistant's language and the bar's entity ids. With several bars, they use the first one.
+
+**1. Turn on packages, once.** In `configuration.yaml`, add (or complete) the `homeassistant:` section:
+
+```yaml
+homeassistant:
+  packages: !include_dir_named packages
+```
+
+Then create the folder `packages` next to `configuration.yaml` (`/config/packages`), with the File editor, Studio Code Server or Samba add-on.
+
+**2. Add the packages.** Copy each package you want into that folder, under a name of your own, one file per package:
+
+```
+/config/
+├── configuration.yaml
+└── packages/
+    ├── jbl_timers.yaml      ← contents of timers-package.yaml
+    └── jbl_messages.yaml    ← contents of messages-package.yaml
+```
+
+Do not paste both into one file, and do not replace one with the other: each file is its own package.
+
+**3. Restart Home Assistant** (Settings › System › ⋮ › Restart). Before that, Developer tools › YAML › *Check configuration* should report no error. Afterwards, Settings › Devices & services › Helpers lists the new helpers (`jbl_timer_…`, `jbl_message_…`).
+
+**4. Add the cards.** On a dashboard: Edit › Add card › *Manual*, then paste the contents of the card file. To show both in one card, put the `cards` of both under a single `vertical-stack`.
+
+If a card shows *Entity not found*, its package is not loaded: check the file is in `/config/packages`, the configuration check, then restart again. If it shows *No Timers entity* or *No Messages entity*, the integration or the toolkit remote on the bar is older than the feature.
 
 ## Restart
 
@@ -178,6 +218,14 @@ Intégration Home Assistant pour la **JBL Bar 9.1**, via la télécommande web l
 **Messages sur l'écran.** Les services `jbl_bar_91.display_message` et `jbl_bar_91.display_cancel` affichent un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. Le message accepte 31 caractères ; il est converti en majuscules sans accent. On peut le répéter (`repeat`), l'afficher pendant une durée (`duration`) ou jusqu'à annulation (`forever`). Un message avec le même `id` remplace le précédent : « Frigo fermé » remplace ainsi « Frigo ouvert ». Des messages d'`id` différents s'affichent à tour de rôle, passage par passage, chacun avec ses propres répétitions, sa durée ou son « jusqu'à annulation ». Un message sans `id` (y compris ceux de l'entité de notification) a l'identifiant `default` : `display_cancel` avec `id: default` l'efface, et sans `id` tous les messages (pas les minuteurs). Avec `clear_on_key: true`, n'importe quelle touche de la télécommande JBL efface le message, signe qu'il a été vu. Les boutons **Effacer le message sans nom** et **Effacer tous les messages** font de même, et le capteur **Messages** liste ceux en cours, avec une télécommande récente.
 
 **Minuteurs.** `jbl_bar_91.timer_start` lance un minuteur sur la barre (durée, nom, temps restant affiché, son à la fin, volume minimum, durée de sonnerie). `jbl_bar_91.timer_cancel` l'arrête par nom, par identifiant ou tous. `jbl_bar_91.timer_extend` ajoute du temps à un minuteur en cours (1 minute par défaut), par nom ou identifiant, sinon au prochain à se terminer. À la fin, `TIME'S UP` et le nom défilent jusqu'à l'appui sur une touche de la télécommande JBL. Les entités *Minuteurs*, *Prochain minuteur* (compte à rebours) et *Minuteur qui sonne* servent au suivi. Un modèle de tableau de bord est fourni dans `dashboards/` : il trouve lui-même les entités de la barre, quelle que soit la langue. Exemple ci-dessus. L'entité de notification *Écran* (`notify.jbl_bar_9_1_ecran`) sert de cible à `notify.send_message` : chaque notification passe deux fois, et le titre est placé devant le message s'il tient dans les 31 caractères. Elle peut entrer dans un groupe de notifications, avec votre téléphone par exemple.
+
+**Modèles de tableau de bord.** Chaque carte (`dashboards/timers-card.yaml`, `dashboards/messages-card.yaml`) a besoin de son *package* (`timers-package.yaml`, `messages-package.yaml`) :
+1. dans `configuration.yaml`, ajoutez une seule fois `packages: !include_dir_named packages` sous `homeassistant:`, puis créez le dossier `/config/packages` ;
+2. copiez chaque package dans ce dossier, un fichier par package (par exemple `jbl_timers.yaml` et `jbl_messages.yaml`), sans les fusionner ni les remplacer l'un par l'autre ;
+3. vérifiez la configuration (Outils de développement › YAML), puis redémarrez Home Assistant ;
+4. dans un tableau de bord, Modifier › Ajouter une carte › Manuel, et collez la carte.
+
+« Entité non trouvée » sur une carte veut dire que son package n'est pas chargé. Des versions françaises de ces fichiers, avec des libellés français, se font en traduisant les `name:` et textes ; les identifiants ne changent pas.
 
 **Redémarrer.** Le bouton **Redémarrer** (dans la configuration de l'appareil, `button.jbl_bar_9_1_redemarrer` en français) redémarre la barre quand elle ne répond plus ; le son s'arrête environ une minute. Home Assistant ne demande pas de confirmation pour un bouton : sur un tableau de bord, ajoutez `confirmation` comme dans l'exemple ci-dessus.
 
