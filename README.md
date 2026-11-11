@@ -168,7 +168,7 @@ Do not paste both into one file, and do not replace one with the other: each fil
 
 **4. Add the cards.** On a dashboard: Edit › Add card › *Manual*, then paste the contents of the card file. To show both in one card, put the `cards` of both under a single `vertical-stack`.
 
-If a card shows *Entity not found*, or *The timers package is missing*, its package is not loaded: check the file is in `/config/packages`, the configuration check, then restart again. If it shows *No Timers entity* or *No Messages entity*, the integration or the toolkit remote on the bar is older than the feature.
+If a card shows *Entity not found*, or *The timers package is missing*, its package is not loaded: check the file is in `/config/packages`, the configuration check, then restart again. If it shows *No Timers entity* or *No Messages entity*, the integration or the toolkit remote on the bar is older than the feature. When the bar's remote is updated while Home Assistant runs, the integration reloads by itself to add the new entities.
 
 ## Restart
 
@@ -224,6 +224,8 @@ Intégration Home Assistant pour la **JBL Bar 9.1**, via la télécommande web l
 2. copiez chaque package dans ce dossier, un fichier par package (par exemple `jbl_timers.yaml` et `jbl_messages.yaml`), sans les fusionner ni les remplacer l'un par l'autre ;
 3. vérifiez la configuration (Outils de développement › YAML), puis redémarrez Home Assistant ;
 4. dans un tableau de bord, Modifier › Ajouter une carte › Manuel, et collez la carte.
+
+Quand la télécommande de la barre est mise à jour pendant que Home Assistant tourne (minuteurs, messages…), l'intégration se recharge d'elle-même pour ajouter les nouvelles entités.
 
 « Entité non trouvée » sur une carte veut dire que son package n'est pas chargé. Des versions françaises de ces fichiers, avec des libellés français, se font en traduisant les `name:` et textes ; les identifiants ne changent pas.
 

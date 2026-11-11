@@ -701,6 +701,28 @@ async def test_no_messages_sensor_on_older_remotes(hass: HomeAssistant, remote) 
     assert hass.states.get("button.jbl_bar_9_1_clear_all_messages") is not None
 
 
+async def test_new_remote_features_appear_without_a_reload(hass: HomeAssistant, remote) -> None:
+    """The bar's remote is updated while Home Assistant runs: the new entities appear by themselves."""
+    remote.timers = None
+    await setup(hass, remote)
+    assert hass.states.get("sensor.jbl_bar_9_1_messages") is None and hass.states.get("sensor.jbl_bar_9_1_timers") is None
+    coordinator = hass.config_entries.async_entries("jbl_bar_91")[0].runtime_data
+    await coordinator.async_refresh()  # nothing new: no reload
+    await hass.async_block_till_done()
+    assert hass.config_entries.async_entries("jbl_bar_91")[0].runtime_data is coordinator
+    remote.timers, remote.messages = [], []
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    entry = hass.config_entries.async_entries("jbl_bar_91")[0]
+    assert entry.runtime_data is not coordinator  # reloaded once
+    assert hass.states.get("sensor.jbl_bar_9_1_messages").state == "0"
+    assert hass.states.get("sensor.jbl_bar_9_1_timers") is not None
+    remote.timers = None  # a feature going away (a bar restarting on an older remote) does not reload
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+    assert hass.config_entries.async_entries("jbl_bar_91")[0].runtime_data is entry.runtime_data
+
+
 async def test_restart_button(hass: HomeAssistant, remote) -> None:
     """The Restart button sends the remote's reboot with confirm; an older remote is reported."""
     await setup(hass, remote)
