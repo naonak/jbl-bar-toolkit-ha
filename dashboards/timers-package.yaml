@@ -10,6 +10,8 @@
 # The *name, *state… lines reuse the first sensor's templates.
 # No unique_id on purpose: dashboards name a registered entity from the entity
 # registry, which keeps an old name; unregistered, the card shows the live name.
+# button.jbl_timer_line_N cancel line N: the card shows them as entity rows, which
+# redraw when the name changes (a plain button row keeps the name of page load).
 template:
   - sensor:
       - default_entity_id: sensor.jbl_timer_line_1
@@ -70,6 +72,39 @@ template:
         icon: *icon
         attributes:
           timer_id: *timer_id
+    button:
+      - default_entity_id: button.jbl_timer_line_1
+        variables: {slot: 1}
+        name: *name
+        availability: *availability
+        icon: *icon
+        press:
+          - action: script.jbl_timer_cancel_slot
+            data: {slot: 1}
+      - default_entity_id: button.jbl_timer_line_2
+        variables: {slot: 2}
+        name: *name
+        availability: *availability
+        icon: *icon
+        press:
+          - action: script.jbl_timer_cancel_slot
+            data: {slot: 2}
+      - default_entity_id: button.jbl_timer_line_3
+        variables: {slot: 3}
+        name: *name
+        availability: *availability
+        icon: *icon
+        press:
+          - action: script.jbl_timer_cancel_slot
+            data: {slot: 3}
+      - default_entity_id: button.jbl_timer_line_4
+        variables: {slot: 4}
+        name: *name
+        availability: *availability
+        icon: *icon
+        press:
+          - action: script.jbl_timer_cancel_slot
+            data: {slot: 4}
 input_text:
   jbl_timer_name:
     name: Timer name

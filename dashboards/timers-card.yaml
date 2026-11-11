@@ -20,55 +20,31 @@ cards:
       - type: conditional
         conditions:
           - condition: state
-            entity: sensor.jbl_timer_line_1
+            entity: button.jbl_timer_line_1
             state_not: unavailable
         row:
-          type: button
-          entity: sensor.jbl_timer_line_1
-          action_name: Cancel
-          tap_action:
-            action: perform-action
-            perform_action: script.jbl_timer_cancel_slot
-            data: {slot: 1}
+          entity: button.jbl_timer_line_1
       - type: conditional
         conditions:
           - condition: state
-            entity: sensor.jbl_timer_line_2
+            entity: button.jbl_timer_line_2
             state_not: unavailable
         row:
-          type: button
-          entity: sensor.jbl_timer_line_2
-          action_name: Cancel
-          tap_action:
-            action: perform-action
-            perform_action: script.jbl_timer_cancel_slot
-            data: {slot: 2}
+          entity: button.jbl_timer_line_2
       - type: conditional
         conditions:
           - condition: state
-            entity: sensor.jbl_timer_line_3
+            entity: button.jbl_timer_line_3
             state_not: unavailable
         row:
-          type: button
-          entity: sensor.jbl_timer_line_3
-          action_name: Cancel
-          tap_action:
-            action: perform-action
-            perform_action: script.jbl_timer_cancel_slot
-            data: {slot: 3}
+          entity: button.jbl_timer_line_3
       - type: conditional
         conditions:
           - condition: state
-            entity: sensor.jbl_timer_line_4
+            entity: button.jbl_timer_line_4
             state_not: unavailable
         row:
-          type: button
-          entity: sensor.jbl_timer_line_4
-          action_name: Cancel
-          tap_action:
-            action: perform-action
-            perform_action: script.jbl_timer_cancel_slot
-            data: {slot: 4}
+          entity: button.jbl_timer_line_4
   - type: markdown
     show_empty: false
     content: |

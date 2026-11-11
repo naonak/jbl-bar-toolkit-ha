@@ -77,6 +77,7 @@ async def test_card_and_scripts(hass: HomeAssistant, remote) -> None:
     assert second.attributes["timer_id"] == "t2" and second.attributes["device_class"] == "timestamp"
     assert slot(hass, 3).state == "unavailable"
     assert er.async_get(hass).async_get("sensor.jbl_timer_line_1") is None  # live name on dashboards
+    assert hass.states.get("button.jbl_timer_line_2").name == second.name
 
     await hass.services.async_call("script", "jbl_timer_add_minute", {}, blocking=True)
     assert remote.timer_log[-1] == ("extend", {"id": "t2", "add_s": 60})  # the next one running (Pizza; the other rings)
@@ -146,8 +147,14 @@ async def test_messages_card_and_scripts(hass: HomeAssistant, remote) -> None:
     await coordinator.async_refresh()
     await hass.async_block_till_done()
     assert hass.states.get("sensor.jbl_message_line_1").name == "DDD – showing, 3 times left"
+    # The card's lines are these buttons, shown as entity rows (redrawn when the name changes).
+    button = hass.states.get("button.jbl_message_line_1")
+    assert button.name == "DDD – showing, 3 times left" and hass.states.get("button.jbl_message_line_2").state == "unavailable"
+    await hass.services.async_call("button", "press", {"entity_id": "button.jbl_message_line_1"}, blocking=True)
+    await hass.async_block_till_done()
+    assert remote.display_log[-1] == ("cancel", {"id": "default"})
     await hass.services.async_call("script", "jbl_message_cancel_slot", {"slot": 3}, blocking=True)  # an empty line: nothing
-    assert remote.display_log[-1] == ("cancel", {"id": "plants"})
+    assert remote.display_log[-1] == ("cancel", {"id": "default"})
 
 
 def test_card_rows_pass_the_frontend_checks() -> None:
@@ -166,3 +173,6 @@ def test_card_rows_pass_the_frontend_checks() -> None:
     assert found
     for row in found:
         assert row.get("name") and row.get("text"), row
+    # A button row draws its name once, at page load: the lines must be entity rows.
+    for card in ("timers-card.yaml", "messages-card.yaml"):
+        assert "type: button\n          entity:" not in (DASHBOARDS / card).read_text(), card
