@@ -5,6 +5,7 @@ from pathlib import Path
 
 import yaml
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.template import Template
 from homeassistant.setup import async_setup_component
 
@@ -48,7 +49,7 @@ async def test_card_without_package(hass: HomeAssistant, remote) -> None:
 
 
 def slot(hass: HomeAssistant, n: int):
-    return hass.states.get(f"sensor.jbl_timer_{n}")
+    return hass.states.get(f"sensor.jbl_timer_line_{n}")
 
 
 async def test_card_and_scripts(hass: HomeAssistant, remote) -> None:
@@ -75,6 +76,7 @@ async def test_card_and_scripts(hass: HomeAssistant, remote) -> None:
     assert second.name.startswith("PIZZA – ends at ") and second.name.endswith("(in 10 min)"), second.name
     assert second.attributes["timer_id"] == "t2" and second.attributes["device_class"] == "timestamp"
     assert slot(hass, 3).state == "unavailable"
+    assert er.async_get(hass).async_get("sensor.jbl_timer_line_1") is None  # live name on dashboards
 
     await hass.services.async_call("script", "jbl_timer_add_minute", {}, blocking=True)
     assert remote.timer_log[-1] == ("extend", {"id": "t2", "add_s": 60})  # the next one running (Pizza; the other rings)
@@ -111,7 +113,7 @@ async def test_messages_card_and_scripts(hass: HomeAssistant, remote) -> None:
         assert await async_setup_component(hass, domain, {domain: config})
     await hass.async_block_till_done()
     assert Template(content, hass).async_render().strip() == ""
-    assert hass.states.get("sensor.jbl_message_1").state == "unavailable"
+    assert hass.states.get("sensor.jbl_message_line_1").state == "unavailable"
     for length, expect in [("Until cleared", {"forever": True}), ("3 times", {"repeat": 3}), ("1 hour", {"duration_s": 3600})]:
         await hass.services.async_call("input_text", "set_value", {"entity_id": "input_text.jbl_message_text", "value": "Call grandma"}, blocking=True)
         await hass.services.async_call("input_select", "select_option", {"entity_id": "input_select.jbl_message_length", "option": length}, blocking=True)
@@ -128,12 +130,22 @@ async def test_messages_card_and_scripts(hass: HomeAssistant, remote) -> None:
     coordinator = hass.config_entries.async_entries("jbl_bar_91")[0].runtime_data
     await coordinator.async_refresh()
     await hass.async_block_till_done()
-    first, second = hass.states.get("sensor.jbl_message_1"), hass.states.get("sensor.jbl_message_2")
+    first, second = hass.states.get("sensor.jbl_message_line_1"), hass.states.get("sensor.jbl_message_line_2")
     assert first.name == "CALL GRANDMA – showing, until cleared" and first.state == "showing", first
     assert second.name == "WATER THE PLANTS (plants) – waiting, 3 times left" and second.attributes["message_id"] == "plants", second
-    assert hass.states.get("sensor.jbl_message_3").state == "unavailable"
+    assert hass.states.get("sensor.jbl_message_line_3").state == "unavailable"
     await hass.services.async_call("script", "jbl_message_cancel_slot", {"slot": 2}, blocking=True)
     assert remote.display_log[-1] == ("cancel", {"id": "plants"})
+    # Dashboards name a registered entity from the entity registry, which kept an old
+    # message there: the line sensors stay out of it, so the card shows their live name.
+    assert er.async_get(hass).async_get("sensor.jbl_message_line_1") is None
+    remote.messages = []
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    remote.messages = [{"id": "default", "named": False, "text": "DDD", "mode": "passes", "passes_left": 3, "showing": True}]
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.jbl_message_line_1").name == "DDD – showing, 3 times left"
     await hass.services.async_call("script", "jbl_message_cancel_slot", {"slot": 3}, blocking=True)  # an empty line: nothing
     assert remote.display_log[-1] == ("cancel", {"id": "plants"})
 
