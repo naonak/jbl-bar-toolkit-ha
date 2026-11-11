@@ -1,0 +1,87 @@
+# JBL Bar Toolkit – messages on the front display: helpers and scripts for messages-card.yaml.
+# Put this file in your packages folder (like timers-package.yaml), for example
+# /config/packages/jbl_messages.yaml, then restart Home Assistant. The scripts
+# find the bar themselves: no entity id to adapt.
+input_text:
+  jbl_message_text:
+    name: Message
+    max: 31
+input_select:
+  jbl_message_length:
+    name: Show it
+    options:
+      - Until cleared
+      - Once
+      - 3 times
+      - 5 min
+      - 15 min
+      - 1 hour
+    initial: Until cleared
+input_boolean:
+  jbl_message_clear_on_key:
+    name: Clear with a key on the JBL remote
+    initial: true
+script:
+  jbl_message_send:
+    alias: Leave the message
+    icon: mdi:message-arrow-right-outline
+    variables:
+      bar: >-
+        {{ integration_entities('jbl_bar_91') | select('match', 'media_player[.]') | first }}
+      text: "{{ states('input_text.jbl_message_text') | trim }}"
+      length: "{{ states('input_select.jbl_message_length') }}"
+      key: "{{ is_state('input_boolean.jbl_message_clear_on_key', 'on') }}"
+    sequence:
+      - condition: template
+        value_template: "{{ text != '' }}"
+      - choose:
+          - conditions: "{{ length == 'Once' or length == '3 times' }}"
+            sequence:
+              - action: jbl_bar_91.display_message
+                target:
+                  entity_id: "{{ bar }}"
+                data:
+                  message: "{{ text }}"
+                  repeat: "{{ 1 if length == 'Once' else 3 }}"
+                  clear_on_key: "{{ key }}"
+          - conditions: "{{ length in ['5 min', '15 min', '1 hour'] }}"
+            sequence:
+              - action: jbl_bar_91.display_message
+                target:
+                  entity_id: "{{ bar }}"
+                data:
+                  message: "{{ text }}"
+                  duration:
+                    minutes: "{{ {'5 min': 5, '15 min': 15, '1 hour': 60}[length] }}"
+                  clear_on_key: "{{ key }}"
+        default:
+          - action: jbl_bar_91.display_message
+            target:
+              entity_id: "{{ bar }}"
+            data:
+              message: "{{ text }}"
+              forever: true
+              clear_on_key: "{{ key }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.jbl_message_text
+        data:
+          value: ""
+  jbl_message_clear_unnamed:
+    alias: Clear the unnamed message
+    icon: mdi:message-minus-outline
+    sequence:
+      - action: jbl_bar_91.display_cancel
+        target:
+          entity_id: >-
+            {{ integration_entities('jbl_bar_91') | select('match', 'media_player[.]') | first }}
+        data:
+          id: default
+  jbl_message_clear_all:
+    alias: Clear all messages
+    icon: mdi:message-off-outline
+    sequence:
+      - action: jbl_bar_91.display_cancel
+        target:
+          entity_id: >-
+            {{ integration_entities('jbl_bar_91') | select('match', 'media_player[.]') | first }}

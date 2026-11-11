@@ -62,6 +62,7 @@ Two services show your own text on the bar's front display, on or in standby, wi
 - `jbl_bar_91.display_cancel` stops the message with `id`, or every message (timers are not affected). A message sent without an `id`, by `display_message` or the notify entity, has the id `default`: there is one at a time, and `id: default` clears it.
 - `clear_on_key: true` on `display_message` lets whoever reads the message clear it with any key on the JBL remote (toolkit remotes with the Messages panel). With `forever: true`, the message stays until it is seen.
 - The buttons **Clear unnamed message** and **Clear all messages** do the same from a dashboard or an automation.
+- **Dashboard template.** [`dashboards/messages-card.yaml`](dashboards/messages-card.yaml) lists the messages on the bar, leaves one (text, how long, clear with a key) and clears them, with the helpers and scripts of [`dashboards/messages-package.yaml`](dashboards/messages-package.yaml), loaded as a package like the timers one.
 - With a toolkit remote that lists them (the Messages panel), the **Messages** sensor gives how many messages are on the display or waiting, and the `messages` attribute each one: `id`, `name` (empty for the unnamed one), `text` as shown, `mode` (`passes`, `duration` or `forever`), `passes_left`, `ends_at` and `showing`.
 
 The bar's own messages (volume, `HELLO` at wake-up…) come first: yours waits, then shows the interrupted pass again. A 1.5 s blank separates passes. Example, the fridge door:

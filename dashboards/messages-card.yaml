@@ -1,0 +1,60 @@
+# JBL Bar Toolkit – messages card.
+# In a dashboard: Edit > Add card > Manual, then paste.
+# It needs the package messages-package.yaml. It finds the bar's entities
+# itself: no entity id to adapt, whatever Home Assistant's language.
+type: vertical-stack
+cards:
+  - type: markdown
+    title: Messages
+    content: |
+      {%- set source = expand(integration_entities('jbl_bar_91'))
+         | selectattr('attributes.messages', 'defined') | list %}
+      {%- if source | count == 0 %}
+      ⚠️ No *Messages* entity: this needs integration 0.9.0 and a bar remote
+      with the Messages panel.
+      {%- else %}
+      {%- set messages = source[0].attributes.messages %}
+      {%- if messages | count == 0 %}
+      No message on the bar.
+      {%- endif %}
+      {%- for m in messages %}
+      - **{{ m.text }}**{{ ' (' ~ m.name ~ ')' if m.name }}:
+        {%- if m.showing %} showing{% else %} waiting{% endif %},
+        {%- if m.mode == 'forever' %} until cleared
+        {%- elif m.mode == 'duration' and m.ends_at %} until {{ as_timestamp(m.ends_at) | timestamp_custom('%H:%M') }}
+        {%- elif m.passes_left == 1 %} last time
+        {%- else %} {{ m.passes_left }} times left
+        {%- endif %}
+      {%- endfor %}
+      {%- endif %}
+  - type: entities
+    title: Leave a message
+    entities:
+      - input_text.jbl_message_text
+      - input_select.jbl_message_length
+      - input_boolean.jbl_message_clear_on_key
+      - type: button
+        name: Show on the bar
+        icon: mdi:message-arrow-right-outline
+        action_name: Show
+        tap_action:
+          action: perform-action
+          perform_action: script.jbl_message_send
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: button
+        name: Clear the unnamed message
+        icon: mdi:message-minus-outline
+        tap_action:
+          action: perform-action
+          perform_action: script.jbl_message_clear_unnamed
+      - type: button
+        name: Clear all messages
+        icon: mdi:message-off-outline
+        tap_action:
+          action: perform-action
+          perform_action: script.jbl_message_clear_all
+          confirmation:
+            text: Clear all messages?
