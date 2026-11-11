@@ -130,6 +130,23 @@ With a toolkit remote that has timers (`bar91.timer`, November 2026), the bar ca
 
 It needs the helpers and scripts from [`dashboards/timers-package.yaml`](dashboards/timers-package.yaml), loaded as a [package](https://www.home-assistant.io/docs/configuration/packages/). Neither names an entity of the bar: they find it with `integration_entities('jbl_bar_91')`, so they work whatever Home Assistant's language and the bar's entity ids. With several bars, they use the first one.
 
+## Restart
+
+The **Restart** button (in the device's configuration) restarts the soundbar, for when it stops responding. The sound stops; the bar is back in about a minute, and the integration reconnects by itself. It needs a toolkit remote with `bar91.system.reboot`. Home Assistant does not ask before pressing a button, so on a dashboard add a confirmation:
+
+```yaml
+type: button
+entity: button.jbl_bar_9_1_restart
+name: Restart the soundbar
+tap_action:
+  action: perform-action
+  perform_action: button.press
+  target:
+    entity_id: button.jbl_bar_9_1_restart
+  confirmation:
+    text: Restart the soundbar? The sound stops for about a minute.
+```
+
 ## How it behaves
 
 - **Live updates.** While the bar is on, the integration listens to the remote's event stream, so changes from the physical remote or the web page appear immediately. The stream makes the remote sample the bar every second, so it is closed in standby; a light state request every 15 s then detects the wake.
@@ -161,6 +178,8 @@ Intégration Home Assistant pour la **JBL Bar 9.1**, via la télécommande web l
 **Messages sur l'écran.** Les services `jbl_bar_91.display_message` et `jbl_bar_91.display_cancel` affichent un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. Le message accepte 31 caractères ; il est converti en majuscules sans accent. On peut le répéter (`repeat`), l'afficher pendant une durée (`duration`) ou jusqu'à annulation (`forever`). Un message avec le même `id` remplace le précédent : « Frigo fermé » remplace ainsi « Frigo ouvert ». Des messages d'`id` différents s'affichent à tour de rôle, passage par passage, chacun avec ses propres répétitions, sa durée ou son « jusqu'à annulation ». Un message sans `id` (y compris ceux de l'entité de notification) a l'identifiant `default` : `display_cancel` avec `id: default` l'efface, et sans `id` tous les messages (pas les minuteurs). Avec `clear_on_key: true`, n'importe quelle touche de la télécommande JBL efface le message, signe qu'il a été vu. Les boutons **Effacer le message sans nom** et **Effacer tous les messages** font de même, et le capteur **Messages** liste ceux en cours, avec une télécommande récente.
 
 **Minuteurs.** `jbl_bar_91.timer_start` lance un minuteur sur la barre (durée, nom, temps restant affiché, son à la fin, volume minimum, durée de sonnerie). `jbl_bar_91.timer_cancel` l'arrête par nom, par identifiant ou tous. `jbl_bar_91.timer_extend` ajoute du temps à un minuteur en cours (1 minute par défaut), par nom ou identifiant, sinon au prochain à se terminer. À la fin, `TIME'S UP` et le nom défilent jusqu'à l'appui sur une touche de la télécommande JBL. Les entités *Minuteurs*, *Prochain minuteur* (compte à rebours) et *Minuteur qui sonne* servent au suivi. Un modèle de tableau de bord est fourni dans `dashboards/` : il trouve lui-même les entités de la barre, quelle que soit la langue. Exemple ci-dessus. L'entité de notification *Écran* (`notify.jbl_bar_9_1_ecran`) sert de cible à `notify.send_message` : chaque notification passe deux fois, et le titre est placé devant le message s'il tient dans les 31 caractères. Elle peut entrer dans un groupe de notifications, avec votre téléphone par exemple.
+
+**Redémarrer.** Le bouton **Redémarrer** (dans la configuration de l'appareil, `button.jbl_bar_9_1_redemarrer` en français) redémarre la barre quand elle ne répond plus ; le son s'arrête environ une minute. Home Assistant ne demande pas de confirmation pour un bouton : sur un tableau de bord, ajoutez `confirmation` comme dans l'exemple ci-dessus.
 
 ## License
 

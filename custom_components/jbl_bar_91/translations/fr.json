@@ -105,6 +105,9 @@
       },
       "clear_messages": {
         "name": "Effacer tous les messages"
+      },
+      "restart": {
+        "name": "Redémarrer"
       }
     },
     "sensor": {
@@ -246,6 +249,9 @@
     },
     "timer_extend_unsupported": {
       "message": "La télécommande installée sur la barre ne sait pas encore ajouter du temps à un minuteur. Mettez à jour JBL Bar Toolkit sur la barre."
+    },
+    "restart_unsupported": {
+      "message": "La télécommande installée sur la barre ne sait pas encore la redémarrer. Mettez à jour JBL Bar Toolkit sur la barre."
     }
   },
   "services": {

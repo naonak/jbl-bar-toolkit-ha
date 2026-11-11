@@ -105,6 +105,9 @@
       },
       "clear_messages": {
         "name": "Clear all messages"
+      },
+      "restart": {
+        "name": "Restart"
       }
     },
     "sensor": {
@@ -246,6 +249,9 @@
     },
     "timer_extend_unsupported": {
       "message": "The browser remote on the soundbar cannot add time to a timer yet. Update the JBL Bar Toolkit on the bar."
+    },
+    "restart_unsupported": {
+      "message": "The browser remote on the soundbar cannot restart it yet. Update the JBL Bar Toolkit on the bar."
     }
   },
   "services": {

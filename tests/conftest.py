@@ -57,6 +57,8 @@ class FakeRemote:
         self.timer_log: list[tuple[str, dict | None]] = []
         self.timer_extend = True  # False: remote with timers but without +1 min
         self.display_log: list[tuple[str, dict | None]] = []
+        self.reboot = True  # False: remote without the restart
+        self.reboots: list[dict | None] = []
         self.messages: list[dict] | None = None  # a list: a remote that lists the messages in course
         self.streams = 0
         self.changed = asyncio.Condition()
@@ -178,6 +180,11 @@ class FakeRemote:
                         t["duration_ms"] = t.get("duration_ms", 0) + params["add_s"] * 1000
             else:
                 self.timers = [t for t in self.timers if t["id"] != params.get("id")]
+            return web.json_response(self.state())
+        if a == "bar91.system.reboot":
+            if not self.reboot:
+                return web.json_response({"error": "unknown control", "state": self.state()}, status=409)
+            self.reboots.append(req.get("parameters"))
             return web.json_response(self.state())
         if a.startswith("bar91.display-message."):
             params = req.get("parameters")

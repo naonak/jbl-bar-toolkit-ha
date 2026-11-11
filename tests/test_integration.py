@@ -699,3 +699,16 @@ async def test_no_messages_sensor_on_older_remotes(hass: HomeAssistant, remote) 
     await setup(hass, remote)
     assert hass.states.get("sensor.jbl_bar_9_1_messages") is None
     assert hass.states.get("button.jbl_bar_9_1_clear_all_messages") is not None
+
+
+async def test_restart_button(hass: HomeAssistant, remote) -> None:
+    """The Restart button sends the remote's reboot with confirm; an older remote is reported."""
+    await setup(hass, remote)
+    state = hass.states.get("button.jbl_bar_9_1_restart")
+    assert state.attributes["device_class"] == "restart"
+    await call(hass, "button", "press", "button.jbl_bar_9_1_restart")
+    assert remote.reboots == [{"confirm": True}]
+    remote.reboot = False
+    with pytest.raises(HomeAssistantError) as err:
+        await call(hass, "button", "press", "button.jbl_bar_9_1_restart")
+    assert err.value.translation_key == "restart_unsupported"

@@ -1,7 +1,7 @@
 """One-shot controls."""
 from __future__ import annotations
 
-from homeassistant.components.button import ButtonEntity
+from homeassistant.components.button import ButtonDeviceClass, ButtonEntity
 from homeassistant.const import EntityCategory, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
@@ -32,7 +32,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
     # Clear the bar's display messages (timers are not affected).
     entities += [JblBarClearMessages(coordinator, "clear_unnamed_message", "mdi:message-minus-outline", {"id": UNNAMED}),
                  JblBarClearMessages(coordinator, "clear_messages", "mdi:message-off-outline", None)]
+    # Restart the soundbar: in the device's configuration, for when it stops responding.
+    entities.append(JblBarRestart(coordinator, "restart"))
     add(entities)
+
+
+class JblBarRestart(JblBarEntity, ButtonEntity):
+    """Restart the soundbar (remote extension bar91.system). Dashboards should add a confirmation."""
+
+    _attr_device_class = ButtonDeviceClass.RESTART
+    _attr_entity_category = EntityCategory.CONFIG
+
+    async def async_press(self) -> None:
+        await self.extension_action("bar91.system", "reboot", {"confirm": True}, "restart_unsupported")
 
 
 class JblBarClearMessages(JblBarEntity, ButtonEntity):
