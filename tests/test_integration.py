@@ -499,6 +499,7 @@ async def test_display_message_and_cancel(hass: HomeAssistant, remote) -> None:
     await call(hass, DOMAIN, "display_message", MP, message="Frigo fermé", id="fridge")
     await call(hass, DOMAIN, "display_message", MP, message="Colis", repeat=3)
     await call(hass, DOMAIN, "display_message", MP, message="Porte", duration={"minutes": 5})
+    await call(hass, DOMAIN, "display_message", MP, message="Pain au four", forever=True, clear_on_key=True)
     await call(hass, DOMAIN, "display_cancel", MP, id="fridge")
     await call(hass, DOMAIN, "display_cancel", MP)
     assert remote.display_log == [
@@ -506,6 +507,7 @@ async def test_display_message_and_cancel(hass: HomeAssistant, remote) -> None:
         ("show", {"text": "Frigo fermé", "id": "fridge"}),
         ("show", {"text": "Colis", "repeat": 3}),
         ("show", {"text": "Porte", "duration_s": 300}),
+        ("show", {"text": "Pain au four", "forever": True, "stop_on_key": True}),
         ("cancel", {"id": "fridge"}),
         ("cancel", None),
     ]
@@ -674,3 +676,26 @@ async def test_timer_extend(hass: HomeAssistant, remote) -> None:
     with pytest.raises(ServiceValidationError) as err:
         await call(hass, DOMAIN, "timer_extend", MP)
     assert err.value.translation_key == "timer_none_running"
+
+
+async def test_display_messages_sensor_and_clear_buttons(hass: HomeAssistant, remote) -> None:
+    """The Messages sensor lists what the remote reports; the buttons clear the unnamed message, or all."""
+    remote.messages = [
+        {"id": "default", "named": False, "text": "FRIGO OUVERT", "mode": "passes", "passes_left": 2, "showing": True},
+        {"id": "colis", "named": True, "text": "COLIS", "mode": "duration", "remaining_ms": 300000, "showing": False},
+    ]
+    await setup(hass, remote)
+    state = hass.states.get("sensor.jbl_bar_9_1_messages")
+    assert state.state == "2"
+    unnamed, colis = state.attributes["messages"]
+    assert unnamed["name"] == "" and unnamed["passes_left"] == 2 and unnamed["showing"] and unnamed["ends_at"] is None
+    assert colis["name"] == "colis" and colis["mode"] == "duration" and colis["ends_at"] and not colis["showing"]
+    await call(hass, "button", "press", "button.jbl_bar_9_1_clear_unnamed_message")
+    await call(hass, "button", "press", "button.jbl_bar_9_1_clear_all_messages")
+    assert remote.display_log[-2:] == [("cancel", {"id": "default"}), ("cancel", None)]
+
+
+async def test_no_messages_sensor_on_older_remotes(hass: HomeAssistant, remote) -> None:
+    await setup(hass, remote)
+    assert hass.states.get("sensor.jbl_bar_9_1_messages") is None
+    assert hass.states.get("button.jbl_bar_9_1_clear_all_messages") is not None

@@ -99,6 +99,12 @@
       },
       "sub_pair": {
         "name": "Pair subwoofer"
+      },
+      "clear_unnamed_message": {
+        "name": "Clear unnamed message"
+      },
+      "clear_messages": {
+        "name": "Clear all messages"
       }
     },
     "sensor": {
@@ -161,6 +167,9 @@
       },
       "next_timer": {
         "name": "Next timer"
+      },
+      "messages": {
+        "name": "Messages"
       }
     },
     "binary_sensor": {
@@ -263,16 +272,20 @@
         "forever": {
           "name": "Until cancelled",
           "description": "Repeat until the message is cancelled or replaced by one with the same id."
+        },
+        "clear_on_key": {
+          "name": "Clear with a key",
+          "description": "Any key on the JBL remote clears the message, as a sign it was seen (toolkit remotes with the Messages panel)."
         }
       }
     },
     "display_cancel": {
       "name": "Cancel a display message",
-      "description": "Stops the message with this id, or every message when no id is given.",
+      "description": "Stops the message with this id, or every message when no id is given (timers are not affected). A message sent without an id has the id default.",
       "fields": {
         "id": {
           "name": "Id",
-          "description": "Id of the message to stop. Empty: every message."
+          "description": "Id of the message to stop; default for the message sent without one. Empty: every message."
         }
       }
     },

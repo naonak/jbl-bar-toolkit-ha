@@ -57,6 +57,7 @@ class FakeRemote:
         self.timer_log: list[tuple[str, dict | None]] = []
         self.timer_extend = True  # False: remote with timers but without +1 min
         self.display_log: list[tuple[str, dict | None]] = []
+        self.messages: list[dict] | None = None  # a list: a remote that lists the messages in course
         self.streams = 0
         self.changed = asyncio.Condition()
         self.port = 0
@@ -91,7 +92,8 @@ class FakeRemote:
                 **({"bar91.bass-offset": {"offset_db": self.bass_offset, "status": "active" if self.bass_offset else "off"}}
                    if self.bass_offset is not None else {}),
                 **({"bar91.timer": {"timers": [dict(t) for t in self.timers]}} if self.timers is not None else {}),
-            }} if self.bass_offset is not None or self.timers is not None else {}),
+                **({"bar91.display-message": {"messages": [dict(m) for m in self.messages]}} if self.messages is not None else {}),
+            }} if self.bass_offset is not None or self.timers is not None or self.messages is not None else {}),
             **({"automation": {"enabled": True, "engine": "go", "status": "IDLE", "remembered_mode": self.remembered_mode}}
                if self.remembered_mode else {}),
         }

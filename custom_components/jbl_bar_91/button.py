@@ -10,6 +10,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from .const import DOMAIN
 from .coordinator import JblBarConfigEntry, JblBarCoordinator
 from .entity import JblBarEntity, advanced_controls, setup_controls
+from .messages import UNNAMED
 
 BUTTONS = {"standard_mode": ("standard", "mdi:auto-fix"), "bluetooth_pairing": ("bluetooth_pair", "mdi:bluetooth-settings")}
 
@@ -28,7 +29,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
     if setup_controls(coordinator.data):
         entities += [JblBarCalibrate(coordinator, "calibrate", "calibrate", "mdi:surround-sound"),
                      JblBarSubPair(coordinator, "sub_pair", "sub_pair", "mdi:speaker-wireless")]
+    # Clear the bar's display messages (timers are not affected).
+    entities += [JblBarClearMessages(coordinator, "clear_unnamed_message", "mdi:message-minus-outline", {"id": UNNAMED}),
+                 JblBarClearMessages(coordinator, "clear_messages", "mdi:message-off-outline", None)]
     add(entities)
+
+
+class JblBarClearMessages(JblBarEntity, ButtonEntity):
+    """Clear the unnamed message (id default), or every message."""
+
+    def __init__(self, coordinator: JblBarCoordinator, key: str, icon: str, parameters: dict | None) -> None:
+        super().__init__(coordinator, key)
+        self._attr_icon = icon
+        self._parameters = parameters
+
+    async def async_press(self) -> None:
+        await self.display_action("cancel", self._parameters)
 
 
 class JblBarButton(JblBarEntity, ButtonEntity):

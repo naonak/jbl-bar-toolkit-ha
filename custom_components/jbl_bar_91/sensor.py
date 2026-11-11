@@ -14,6 +14,7 @@ from homeassistant.util import dt as dt_util
 from .coordinator import JblBarConfigEntry, JblBarCoordinator
 from .entity import JblBarEntity, eq_installed, setup_controls, smart_mode_memory
 from .timers import TimerClock, timers_installed
+from .messages import MessageClock, messages_installed
 
 
 def _memory(doc: dict[str, Any]) -> float | None:
@@ -105,6 +106,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
     add(JblBarSensor(entry.runtime_data, description) for description in descriptions)
     if timers_installed(entry.runtime_data.data):
         add([JblBarTimers(entry.runtime_data, "timers"), JblBarNextTimer(entry.runtime_data, "next_timer")])
+    if messages_installed(entry.runtime_data.data):
+        add([JblBarMessages(entry.runtime_data, "messages")])
+
+
+class JblBarMessages(JblBarEntity, SensorEntity):
+    """How many messages are on the bar's display or waiting; each one in the messages attribute."""
+
+    _attr_icon = "mdi:message-text-outline"
+
+    def __init__(self, coordinator: JblBarCoordinator, key: str) -> None:
+        super().__init__(coordinator, key)
+        self._clock = MessageClock()
+        self._described: list[dict[str, Any]] = []
+
+    def _handle_coordinator_update(self) -> None:
+        self._described = self._clock.describe(self.state_doc)
+        super()._handle_coordinator_update()
+
+    async def async_added_to_hass(self) -> None:
+        self._described = self._clock.describe(self.state_doc)
+        await super().async_added_to_hass()
+
+    @property
+    def native_value(self) -> int:
+        return len(self._described)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"messages": self._described}
 
 
 def timer_clock(coordinator: JblBarCoordinator) -> TimerClock:

@@ -26,6 +26,9 @@ display_message:
     forever:
       selector:
         boolean:
+    clear_on_key:
+      selector:
+        boolean:
 display_cancel:
   target:
     entity:

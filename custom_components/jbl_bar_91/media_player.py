@@ -43,6 +43,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
             vol.Optional("repeat"): vol.All(vol.Coerce(int), vol.Range(min=1, max=99)),
             vol.Optional("duration"): cv.positive_time_period,
             vol.Optional("forever"): cv.boolean,
+            vol.Optional("clear_on_key"): cv.boolean,
         },
         "async_display_message",
     )
@@ -206,6 +207,7 @@ class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
         repeat: int | None = None,
         duration: timedelta | None = None,
         forever: bool | None = None,
+        clear_on_key: bool | None = None,
     ) -> None:
         """Show a message on the bar's front display (on or in standby)."""
         if sum(x is not None and x is not False for x in (repeat, duration, forever)) > 1:
@@ -222,6 +224,8 @@ class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
             parameters["duration_s"] = seconds
         if forever:
             parameters["forever"] = True
+        if clear_on_key:
+            parameters["stop_on_key"] = True  # any key on the JBL remote clears it
         await self.display_action("show", parameters)
 
     async def async_display_cancel(self, id: str | None = None) -> None:

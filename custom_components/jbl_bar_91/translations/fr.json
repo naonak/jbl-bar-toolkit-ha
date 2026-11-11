@@ -99,6 +99,12 @@
       },
       "sub_pair": {
         "name": "Appairer le caisson"
+      },
+      "clear_unnamed_message": {
+        "name": "Effacer le message sans nom"
+      },
+      "clear_messages": {
+        "name": "Effacer tous les messages"
       }
     },
     "sensor": {
@@ -161,6 +167,9 @@
       },
       "next_timer": {
         "name": "Prochain minuteur"
+      },
+      "messages": {
+        "name": "Messages"
       }
     },
     "binary_sensor": {
@@ -263,16 +272,20 @@
         "forever": {
           "name": "Jusqu'à annulation",
           "description": "Répéter jusqu'à ce que le message soit annulé ou remplacé par un message de même identifiant."
+        },
+        "clear_on_key": {
+          "name": "Effacer avec une touche",
+          "description": "N'importe quelle touche de la télécommande JBL efface le message, signe qu'il a été vu (télécommandes de la toolkit avec le panneau Messages)."
         }
       }
     },
     "display_cancel": {
       "name": "Annuler un message de l'écran",
-      "description": "Arrête le message de cet identifiant, ou tous les messages si aucun identifiant n'est donné.",
+      "description": "Arrête le message qui porte cet identifiant, ou tous les messages sans identifiant (les minuteurs ne sont pas touchés). Un message envoyé sans identifiant a l'identifiant default.",
       "fields": {
         "id": {
           "name": "Identifiant",
-          "description": "Identifiant du message à arrêter. Vide : tous les messages."
+          "description": "Identifiant du message à arrêter ; default pour le message envoyé sans identifiant. Vide : tous les messages."
         }
       }
     },
