@@ -94,7 +94,7 @@
         "name": "Smart mode"
       },
       "display_clock": {
-        "name": "Clock in standby"
+        "name": "Clock"
       }
     },
     "button": {

@@ -103,41 +103,6 @@ cards:
         tap_action:
           action: perform-action
           perform_action: script.jbl_message_send
-      - type: conditional
-        conditions:
-          - condition: state
-            entity: switch.jbl_display_clock
-            state: ["on", "off"]
-        row:
-          entity: switch.jbl_display_clock
-      - type: conditional
-        conditions:
-          - condition: state
-            entity: select.jbl_display_clock_when
-            state: ["standby", "always"]
-        row:
-          entity: select.jbl_display_clock_when
-      - type: conditional
-        conditions:
-          - condition: state
-            entity: switch.jbl_display_clock
-            state: ["on", "off"]
-        row:
-          entity: input_boolean.jbl_clock_scheduled
-      - type: conditional
-        conditions:
-          - condition: state
-            entity: switch.jbl_display_clock
-            state: ["on", "off"]
-        row:
-          entity: input_datetime.jbl_clock_from
-      - type: conditional
-        conditions:
-          - condition: state
-            entity: switch.jbl_display_clock
-            state: ["on", "off"]
-        row:
-          entity: input_datetime.jbl_clock_until
   - type: grid
     columns: 1
     square: false
@@ -150,3 +115,38 @@ cards:
           perform_action: script.jbl_message_clear_all
           confirmation:
             text: Clear all messages?
+  - type: entities
+    title: Clock
+    visibility:
+      - condition: state
+        entity: switch.jbl_display_clock
+        state: ["on", "off"]
+    entities:
+      - entity: switch.jbl_display_clock
+        name: Clock on the display
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: select.jbl_display_clock_when
+            state: ["standby", "always"]
+        row:
+          entity: select.jbl_display_clock_when
+          name: Shows
+      - entity: input_boolean.jbl_clock_scheduled
+        name: On a schedule
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: input_boolean.jbl_clock_scheduled
+            state: "on"
+        row:
+          entity: input_datetime.jbl_clock_from
+          name: From
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: input_boolean.jbl_clock_scheduled
+            state: "on"
+        row:
+          entity: input_datetime.jbl_clock_until
+          name: Until

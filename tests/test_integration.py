@@ -802,7 +802,7 @@ async def test_standby_clock_switch(hass: HomeAssistant, remote) -> None:
     await hass.async_block_till_done()
     coordinator = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
     clock = hass.states.get("switch.jbl_display_clock")
-    assert clock.state == "off" and clock.name == "JBL Bar 9.1 Clock in standby", clock
+    assert clock.state == "off" and clock.name == "JBL Bar 9.1 Clock", clock
     await call(hass, "switch", "turn_on", "switch.jbl_display_clock")
     assert remote.display_log[-1] == ("clock", {"enabled": True, "tz": "Europe/Paris"})
     assert hass.states.get("switch.jbl_display_clock").state == "on"
