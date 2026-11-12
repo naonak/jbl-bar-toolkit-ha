@@ -19,9 +19,21 @@ input_select:
       - 1 hour
     initial: Until cleared
 input_boolean:
+  jbl_clock_scheduled:
+    name: Clock on a schedule
+    icon: mdi:clock-time-eight-outline
   jbl_message_clear_on_key:
     name: Clear with a key on the JBL remote
     initial: true
+input_datetime:
+  jbl_clock_from:
+    name: Clock from
+    has_date: false
+    has_time: true
+  jbl_clock_until:
+    name: Clock until
+    has_date: false
+    has_time: true
 script:
   jbl_message_send:
     alias: Leave the message
@@ -77,3 +89,43 @@ script:
         target:
           entity_id: >-
             {{ integration_entities('jbl_bar_91') | select('match', 'media_player[.]') | first }}
+# Clock on a schedule: with "Clock on a schedule" on, the bar's standby clock
+# (switch.jbl_display_clock, toolkit remote with the clock) is on from "Clock
+# from" to "Clock until", every day; the same time in both = all day. Over
+# midnight works (22:00 to 07:00). Turning the schedule off leaves the clock as
+# it is.
+automation:
+  - id: jbl_clock_schedule
+    alias: "JBL clock on a schedule"
+    mode: restart
+    triggers:
+      - trigger: time
+        at: input_datetime.jbl_clock_from
+      - trigger: time
+        at: input_datetime.jbl_clock_until
+      - trigger: state
+        entity_id:
+          - input_boolean.jbl_clock_scheduled
+          - input_datetime.jbl_clock_from
+          - input_datetime.jbl_clock_until
+      - trigger: state
+        entity_id: switch.jbl_display_clock
+        from: unavailable
+      - trigger: homeassistant
+        event: start
+    conditions:
+      - condition: state
+        entity_id: input_boolean.jbl_clock_scheduled
+        state: "on"
+      - condition: template
+        value_template: "{{ states('switch.jbl_display_clock') in ['on', 'off'] }}"
+    actions:
+      - variables:
+          start: "{{ states('input_datetime.jbl_clock_from') }}"
+          end: "{{ states('input_datetime.jbl_clock_until') }}"
+          now_: "{{ now().strftime('%H:%M:%S') }}"
+          inside: >-
+            {{ start == end or (start <= now_ < end if start < end else (now_ >= start or now_ < end)) }}
+      - action: "switch.turn_{{ 'on' if inside else 'off' }}"
+        target:
+          entity_id: switch.jbl_display_clock

@@ -1,12 +1,14 @@
 """The dashboard template: the card's text and the package's scripts, against the fake remote."""
 from __future__ import annotations
 
+from datetime import timedelta
 from pathlib import Path
 
 import yaml
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.template import Template
 from homeassistant.setup import async_setup_component
+from homeassistant.util import dt as dt_util
 
 from .test_integration import setup
 
@@ -159,3 +161,31 @@ def test_card_rows_pass_the_frontend_checks() -> None:
     # A button row draws its name once, at page load: the lines must be entity rows.
     for card in ("timers-card.yaml", "messages-card.yaml"):
         assert "type: button\n          entity:" not in (DASHBOARDS / card).read_text(), card
+
+
+async def test_clock_schedule(hass: HomeAssistant, remote, freezer) -> None:
+    """With the schedule on, the package's automation turns the standby clock on inside the hours, off outside."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0))  # far from midnight
+    remote.messages, remote.clock = [], {"enabled": False, "tz": ""}
+    await setup(hass, remote)
+    for domain, config in load("messages-package.yaml").items():
+        assert await async_setup_component(hass, domain, {domain: config})
+    await hass.async_block_till_done()
+    now = dt_util.now()
+
+    async def hours(start, end) -> None:
+        for entity, when in (("input_datetime.jbl_clock_from", start), ("input_datetime.jbl_clock_until", end)):
+            await hass.services.async_call("input_datetime", "set_datetime", {"entity_id": entity, "time": when.strftime("%H:%M:00")}, blocking=True)
+        await hass.async_block_till_done()
+
+    await hours(now - timedelta(hours=1), now + timedelta(hours=1))
+    assert remote.clock["enabled"] is False  # schedule off: nothing happens
+    await hass.services.async_call("input_boolean", "turn_on", {"entity_id": "input_boolean.jbl_clock_scheduled"}, blocking=True)
+    await hass.async_block_till_done()
+    assert remote.clock["enabled"] is True, remote.display_log
+    await hours(now + timedelta(hours=1), now + timedelta(hours=2))  # now is outside
+    assert remote.clock["enabled"] is False, remote.display_log
+    await hours(now + timedelta(hours=2), now + timedelta(hours=1))  # over midnight, now inside
+    assert remote.clock["enabled"] is True, remote.display_log
+    await hours(now, now)  # the same time twice: all day
+    assert remote.clock["enabled"] is True

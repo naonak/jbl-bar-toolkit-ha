@@ -110,6 +110,27 @@ cards:
             state: ["on", "off"]
         row:
           entity: switch.jbl_display_clock
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: switch.jbl_display_clock
+            state: ["on", "off"]
+        row:
+          entity: input_boolean.jbl_clock_scheduled
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: switch.jbl_display_clock
+            state: ["on", "off"]
+        row:
+          entity: input_datetime.jbl_clock_from
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: switch.jbl_display_clock
+            state: ["on", "off"]
+        row:
+          entity: input_datetime.jbl_clock_until
   - type: grid
     columns: 1
     square: false
