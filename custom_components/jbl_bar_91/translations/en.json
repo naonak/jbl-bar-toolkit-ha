@@ -66,6 +66,13 @@
           "bright": "Bright",
           "vocal_focus": "Vocal focus"
         }
+      },
+      "display_clock_when": {
+        "name": "Clock shows",
+        "state": {
+          "standby": "In standby",
+          "always": "Always (bar on too)"
+        }
       }
     },
     "number": {

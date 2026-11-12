@@ -798,9 +798,9 @@ async def test_standby_clock_switch(hass: HomeAssistant, remote) -> None:
     assert hass.states.get("switch.jbl_display_clock") is None  # remote without the clock
     await hass.config.async_update(time_zone="Europe/Paris")
     remote.clock = {"enabled": False, "tz": ""}
-    coordinator = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
-    await coordinator.async_refresh()  # the remote gained the clock: the integration reloads by itself
+    await hass.config_entries.async_entries(DOMAIN)[0].runtime_data.async_refresh()  # gained the clock: reloads by itself
     await hass.async_block_till_done()
+    coordinator = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
     clock = hass.states.get("switch.jbl_display_clock")
     assert clock.state == "off" and clock.name == "JBL Bar 9.1 Clock in standby", clock
     await call(hass, "switch", "turn_on", "switch.jbl_display_clock")
@@ -808,3 +808,12 @@ async def test_standby_clock_switch(hass: HomeAssistant, remote) -> None:
     assert hass.states.get("switch.jbl_display_clock").state == "on"
     await call(hass, "switch", "turn_off", "switch.jbl_display_clock")
     assert remote.display_log[-1] == ("clock", {"enabled": False}) and remote.clock["tz"] == "Europe/Paris"
+    # Where it shows: in standby only, or with the bar on too (a remote that reports "when").
+    assert hass.states.get("select.jbl_display_clock_when").state == "unavailable"  # this remote has no "when" yet
+    remote.clock["when"] = "standby"
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    when = hass.states.get("select.jbl_display_clock_when")
+    assert when.state == "standby" and when.name == "JBL Bar 9.1 Clock shows", when
+    await call(hass, "select", "select_option", "select.jbl_display_clock_when", option="always")
+    assert remote.display_log[-1] == ("clock", {"when": "always"}) and remote.clock["when"] == "always"

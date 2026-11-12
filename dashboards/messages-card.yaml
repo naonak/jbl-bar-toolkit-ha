@@ -113,6 +113,13 @@ cards:
       - type: conditional
         conditions:
           - condition: state
+            entity: select.jbl_display_clock_when
+            state: ["standby", "always"]
+        row:
+          entity: select.jbl_display_clock_when
+      - type: conditional
+        conditions:
+          - condition: state
             entity: switch.jbl_display_clock
             state: ["on", "off"]
         row:

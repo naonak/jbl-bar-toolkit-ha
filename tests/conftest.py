@@ -192,7 +192,7 @@ class FakeRemote:
             if self.clock is None:
                 return web.json_response({"error": "unknown control", "state": self.state()}, status=409)
             params = req.get("parameters") or {}
-            self.clock = {"enabled": bool(params["enabled"]), "tz": params.get("tz", self.clock.get("tz", ""))}
+            self.clock = {**self.clock, **{k: params[k] for k in ("enabled", "when", "tz") if k in params}}
             self.display_log.append(("clock", params))
             return web.json_response(self.state())
         if a.startswith("bar91.display-message."):

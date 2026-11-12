@@ -66,6 +66,13 @@
           "bright": "Brillant",
           "vocal_focus": "Voix en avant"
         }
+      },
+      "display_clock_when": {
+        "name": "Horloge affichée",
+        "state": {
+          "standby": "En veille",
+          "always": "Toujours (barre allumée aussi)"
+        }
       }
     },
     "number": {

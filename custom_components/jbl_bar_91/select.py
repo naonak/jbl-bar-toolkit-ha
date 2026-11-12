@@ -11,6 +11,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from .const import EQ_PRESETS
 from .coordinator import JblBarConfigEntry, JblBarCoordinator
 from .entity import JblBarEntity, eq_chosen_curve, eq_installed
+from .switch import DISPLAY_CLOCK, clock_state
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -37,7 +38,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
     entities: list[SelectEntity] = [JblBarLevel(coordinator, level) for level in LEVELS if level.field != "center" or "center" in sound]
     if eq_installed(coordinator.data):
         entities.append(JblBarEqPreset(coordinator, "eq_preset"))
+    if clock_state(coordinator.data) is not None:
+        entities.append(JblBarClockWhen(coordinator, "display_clock_when"))
     add(entities)
+
+
+class JblBarClockWhen(JblBarEntity, SelectEntity):
+    """Where the clock shows when on: in standby only, or also with the bar on."""
+
+    _attr_icon = "mdi:clock-digital"
+    _attr_options = ["standby", "always"]
+
+    def __init__(self, coordinator: JblBarCoordinator, key: str) -> None:
+        super().__init__(coordinator, key)
+        self.entity_id = "select.jbl_display_clock_when"  # suggested, for dashboard templates
+
+    @property
+    def available(self) -> bool:
+        state = clock_state(self.state_doc)
+        return super().available and state is not None and "when" in state
+
+    @property
+    def current_option(self) -> str | None:
+        state = clock_state(self.state_doc) or {}
+        return state.get("when") if state.get("when") in self._attr_options else None
+
+    async def async_select_option(self, option: str) -> None:
+        await self.extension_action(DISPLAY_CLOCK, "set", {"when": option}, "display_unsupported")
 
 
 class JblBarLevel(JblBarEntity, SelectEntity):
