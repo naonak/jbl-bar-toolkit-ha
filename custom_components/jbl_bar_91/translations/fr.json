@@ -85,6 +85,9 @@
       },
       "smart_mode": {
         "name": "Mode Smart"
+      },
+      "display_clock": {
+        "name": "Horloge en veille"
       }
     },
     "button": {

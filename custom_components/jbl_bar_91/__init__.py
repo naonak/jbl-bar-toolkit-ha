@@ -19,6 +19,7 @@ from .entity import (
     smart_mode_memory,
 )
 from .messages import messages_installed
+from .switch import clock_state
 from .timers import timers_installed
 
 PLATFORMS = [
@@ -40,6 +41,7 @@ def features(doc: dict[str, Any] | None) -> frozenset[str]:
         "advanced": advanced_controls(doc), "bass_offset": bass_offset_state(doc) is not None,
         "eq": eq_installed(doc), "setup": setup_controls(doc), "memory": smart_mode_memory(doc),
         "timers": timers_installed(doc), "messages": messages_installed(doc),
+        "display_clock": clock_state(doc) is not None,
     }
     return frozenset(name for name, present in checks.items() if present)
 

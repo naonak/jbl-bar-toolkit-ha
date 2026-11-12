@@ -790,3 +790,21 @@ async def test_events_and_rear_batteries(hass: HomeAssistant, remote) -> None:
                     ("timer", "ringing", {"id": "t1"}), ("message", "ended", {"id": "colis"}),
                     ("timer", "cancelled", {"id": "t0"}), ("timer", "finished", {"id": "t1"})], seen
     assert hass.states.get(timer_events).attributes["name"] == "PIZZA"
+
+
+async def test_standby_clock_switch(hass: HomeAssistant, remote) -> None:
+    """The clock switch follows the bar and sends Home Assistant's time zone; it appears with a remote that has it."""
+    await setup(hass, remote)
+    assert hass.states.get("switch.jbl_display_clock") is None  # remote without the clock
+    await hass.config.async_update(time_zone="Europe/Paris")
+    remote.clock = {"enabled": False, "tz": ""}
+    coordinator = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    await coordinator.async_refresh()  # the remote gained the clock: the integration reloads by itself
+    await hass.async_block_till_done()
+    clock = hass.states.get("switch.jbl_display_clock")
+    assert clock.state == "off" and clock.name == "JBL Bar 9.1 Clock in standby", clock
+    await call(hass, "switch", "turn_on", "switch.jbl_display_clock")
+    assert remote.display_log[-1] == ("clock", {"enabled": True, "tz": "Europe/Paris"})
+    assert hass.states.get("switch.jbl_display_clock").state == "on"
+    await call(hass, "switch", "turn_off", "switch.jbl_display_clock")
+    assert remote.display_log[-1] == ("clock", {"enabled": False}) and remote.clock["tz"] == "Europe/Paris"

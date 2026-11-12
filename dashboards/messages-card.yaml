@@ -103,6 +103,13 @@ cards:
         tap_action:
           action: perform-action
           perform_action: script.jbl_message_send
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: switch.jbl_display_clock
+            state: ["on", "off"]
+        row:
+          entity: switch.jbl_display_clock
   - type: grid
     columns: 1
     square: false

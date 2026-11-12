@@ -60,6 +60,7 @@ class FakeRemote:
         self.reboot = True  # False: remote without the restart
         self.reboots: list[dict | None] = []
         self.messages: list[dict] | None = None  # a list: a remote that lists the messages in course
+        self.clock: dict | None = None  # a dict: a remote with the standby clock (enabled, tz)
         self.streams = 0
         self.changed = asyncio.Condition()
         self.port = 0
@@ -95,7 +96,8 @@ class FakeRemote:
                    if self.bass_offset is not None else {}),
                 **({"bar91.timer": {"timers": [dict(t) for t in self.timers]}} if self.timers is not None else {}),
                 **({"bar91.display-message": {"messages": [dict(m) for m in self.messages]}} if self.messages is not None else {}),
-            }} if self.bass_offset is not None or self.timers is not None or self.messages is not None else {}),
+                **({"bar91.display-clock": dict(self.clock)} if self.clock is not None else {}),
+            }} if self.bass_offset is not None or self.timers is not None or self.messages is not None or self.clock is not None else {}),
             **({"automation": {"enabled": True, "engine": "go", "status": "IDLE", "remembered_mode": self.remembered_mode}}
                if self.remembered_mode else {}),
         }
@@ -185,6 +187,13 @@ class FakeRemote:
             if not self.reboot:
                 return web.json_response({"error": "unknown control", "state": self.state()}, status=409)
             self.reboots.append(req.get("parameters"))
+            return web.json_response(self.state())
+        if a == "bar91.display-clock.set":
+            if self.clock is None:
+                return web.json_response({"error": "unknown control", "state": self.state()}, status=409)
+            params = req.get("parameters") or {}
+            self.clock = {"enabled": bool(params["enabled"]), "tz": params.get("tz", self.clock.get("tz", ""))}
+            self.display_log.append(("clock", params))
             return web.json_response(self.state())
         if a.startswith("bar91.display-message."):
             params = req.get("parameters")

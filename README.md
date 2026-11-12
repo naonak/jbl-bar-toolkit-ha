@@ -48,6 +48,7 @@ Then: *Settings → Devices & services → Add integration → JBL Bar Toolkit (
 | Rear speakers docked, Bluetooth connected | Binary sensors |
 | Rear left battery, Rear right battery | Battery level of each rear speaker (%), as last reported: it may lag while the speakers are off. For low-battery automations |
 | Timer events, Message events | Event entities for automations: `started`, `ringing`, `finished` (it rang) and `cancelled` (stopped before ringing) for timers; `shown` and `ended` for messages. Data: `id` and `name` (timers), `id`, `text`, `named` (messages). Nothing fires for what is already there at start |
+| Clock in standby | Switch `switch.jbl_display_clock`: the time on the front display while the bar is in standby (`18H54`), below every message, timer and screen of the bar's own; turning it on sends Home Assistant's time zone. Only with a toolkit remote that has the clock (`bar91.display-clock`) |
 | Timer line 1–8, Message line 1–8 | Buttons `button.jbl_timer_line_N` / `button.jbl_message_line_N`: line N is the Nth timer (first to end first, a ringing one on top) or message, named after it (`Pizza – ends at 18:54`, `CALL GRANDMA – until cleared`); pressing it cancels that timer or clears that message. Unavailable when empty, so a dashboard hides it |
 | CPU, Memory used, Temperature, Wi-Fi signal, Uptime | Diagnostics (the last two disabled by default) |
 
@@ -247,6 +248,8 @@ Intégration Home Assistant pour la **JBL Bar 9.1**, via la télécommande web l
 Quand la télécommande de la barre est mise à jour pendant que Home Assistant tourne (minuteurs, messages…), l'intégration se recharge d'elle-même pour ajouter les nouvelles entités.
 
 **Événements et batteries.** Les entités *Événements des minuteurs* (`started` lancé, `ringing` sonne, `finished` terminé après avoir sonné, `cancelled` annulé avant) et *Événements des messages* (`shown` affiché, `ended` terminé) servent de déclencheurs d'automatisation, par exemple une notification sur le téléphone quand la pizza sonne. *Batterie arrière gauche* et *droite* donnent la charge des enceintes arrière (dernière valeur connue).
+
+**Horloge en veille.** L'interrupteur *Horloge en veille* (`switch.jbl_display_clock`) affiche l'heure sur l'écran de la barre en veille (`18H54`, l'écran n'a pas de deux-points). Elle passe après tout le reste : messages, minuteurs et écrans de la barre. En l'allumant, Home Assistant envoie son fuseau horaire. Il faut une télécommande de la barre qui gère l'horloge.
 
 « Entité non trouvée » sur une carte veut dire que son package n'est pas chargé. Des versions françaises de ces fichiers, avec des libellés français, se font en traduisant les `name:` et textes ; les identifiants ne changent pas.
 
