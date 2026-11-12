@@ -6,6 +6,7 @@ type: vertical-stack
 cards:
   - type: entities
     title: Timers
+    show_header_toggle: false
     entities:
       - type: conditional
         conditions:
@@ -142,6 +143,7 @@ cards:
           data: {minutes: 15}
   - type: entities
     title: Custom timer
+    show_header_toggle: false
     entities:
       - input_text.jbl_timer_name
       - input_number.jbl_timer_minutes

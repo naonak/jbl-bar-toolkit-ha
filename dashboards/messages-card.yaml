@@ -6,6 +6,7 @@ type: vertical-stack
 cards:
   - type: entities
     title: Messages
+    show_header_toggle: false
     entities:
       - type: conditional
         conditions:
@@ -92,6 +93,7 @@ cards:
       {%- endif %}
   - type: entities
     title: Leave a message
+    show_header_toggle: false
     entities:
       - input_text.jbl_message_text
       - input_select.jbl_message_length
@@ -117,6 +119,7 @@ cards:
             text: Clear all messages?
   - type: entities
     title: Clock
+    show_header_toggle: false
     visibility:
       - condition: state
         entity: switch.jbl_display_clock
