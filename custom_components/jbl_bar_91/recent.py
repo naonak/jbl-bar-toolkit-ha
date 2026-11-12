@@ -4,7 +4,8 @@ Every timer and message that shows up on the bar is remembered, wherever it
 came from (the page, Home Assistant, an automation): as it was when first
 seen, so the timer's full length and the message's whole count or duration.
 The last RECENT of each, most recent first, without repeats, are kept in
-Home Assistant's storage, so they survive a restart.
+Home Assistant's storage, so they survive a restart. One still running is
+left out of the recent ones (it has its line) until it is over.
 
 Each is a button (button.jbl_recent_timer_N, button.jbl_recent_message_N)
 named after it; pressing it starts that timer or shows that message again.
@@ -25,7 +26,8 @@ from .lines import TEXT, texts
 from .messages import message_list
 from .timers import TIMER, timer_list
 
-RECENT = 4
+RECENT = 4  # shown
+KEEP = 2 * RECENT  # stored: room for the ones running, which are not shown
 STORE_VERSION = 1
 
 
@@ -38,11 +40,15 @@ class RecentTracker:
         self.timers: list[dict[str, Any]] = []
         self.messages: list[dict[str, Any]] = []
         self._seen: set[str] | None = None  # None until the first state: what runs then is not new
+        # What runs now, as recent keys: those are not shown among the recent ones.
+        self._timer_keys: dict[str, tuple[str, int]] = {}
+        self._running_timers: set[tuple[str, int]] = set()
+        self._running_messages: set[tuple[str, str]] = set()
 
     async def async_load(self) -> None:
         data = await self._store.async_load() or {}
-        self.timers = [t for t in data.get("timers", []) if isinstance(t, dict) and isinstance(t.get("minutes"), int)][:RECENT]
-        self.messages = [m for m in data.get("messages", []) if isinstance(m, dict) and isinstance(m.get("text"), str)][:RECENT]
+        self.timers = [t for t in data.get("timers", []) if isinstance(t, dict) and isinstance(t.get("minutes"), int)][:KEEP]
+        self.messages = [m for m in data.get("messages", []) if isinstance(m, dict) and isinstance(m.get("text"), str)][:KEEP]
 
     def _save(self) -> None:
         # Rare (a new timer or message): written at once.
@@ -63,24 +69,34 @@ class RecentTracker:
         seen = self._seen or set()
         changed = False
         now: set[str] = set()
+        timer_keys: dict[str, tuple[str, int]] = {}
+        running_messages: set[tuple[str, str]] = set()
         for t in timer_list(doc):
             key = f"timer:{t['id']}"
             now.add(key)
-            if first or key in seen or not isinstance(t.get("duration_ms"), int):
+            if not isinstance(t.get("duration_ms"), int):
                 continue
-            entry = {"text": t.get("text") or "", "minutes": max(1, round(t["duration_ms"] / 60000)),
+            # Its recent key, from its length when first seen (+1 min later does not change it).
+            recent_key = self._timer_keys.get(t["id"]) or (t.get("text") or "", max(1, round(t["duration_ms"] / 60000)))
+            timer_keys[t["id"]] = recent_key
+            if first or key in seen:
+                continue
+            entry = {"text": recent_key[0], "minutes": recent_key[1],
                      "sound": t.get("sound") or "off", "countdown": bool(t.get("countdown"))}
             for extra in ("sound_volume", "ring_s"):
                 if isinstance(t.get(extra), int):
                     entry[extra] = t[extra]
-            self.timers = [entry, *[r for r in self.timers if (r["text"], r["minutes"]) != (entry["text"], entry["minutes"])]][:RECENT]
+            self.timers = [entry, *[r for r in self.timers if (r["text"], r["minutes"]) != (entry["text"], entry["minutes"])]][:KEEP]
             changed = True
         for m in message_list(doc):
             key = f"message:{m['id']}:{m.get('text')}"
             now.add(key)
-            if first or key in seen or not m.get("text"):
+            if not m.get("text"):
                 continue
             entry = {"text": m["text"], "id": m["id"] if m.get("named") else "", "stop_on_key": bool(m.get("stop_on_key"))}
+            running_messages.add((entry["text"], entry["id"]))
+            if first or key in seen:
+                continue
             if m.get("mode") == "forever":
                 entry["forever"] = True
             elif m.get("mode") == "duration" and isinstance(m.get("remaining_ms"), int):
@@ -89,12 +105,23 @@ class RecentTracker:
                 entry["repeat"] = m["passes_left"]
             else:
                 continue
-            self.messages = [entry, *[r for r in self.messages if (r["text"], r["id"]) != (entry["text"], entry["id"])]][:RECENT]
+            self.messages = [entry, *[r for r in self.messages if (r["text"], r["id"]) != (entry["text"], entry["id"])]][:KEEP]
             changed = True
         self._seen = now
+        self._timer_keys = timer_keys
+        self._running_timers = set(timer_keys.values())
+        self._running_messages = running_messages
         if changed:
             self._save()
         return changed
+
+
+    def shown_timers(self) -> list[dict[str, Any]]:
+        """The recent timers to offer: not one running now."""
+        return [r for r in self.timers if (r["text"], r["minutes"]) not in self._running_timers][:RECENT]
+
+    def shown_messages(self) -> list[dict[str, Any]]:
+        return [r for r in self.messages if (r["text"], r["id"]) not in self._running_messages][:RECENT]
 
 
 def tracker(coordinator: JblBarCoordinator) -> RecentTracker:
@@ -144,7 +171,7 @@ class JblBarRecentTimer(JblBarRecent):
     _attr_icon = "mdi:timer-refresh-outline"
 
     def items(self) -> list[dict[str, Any]]:
-        return tracker(self.coordinator).timers
+        return tracker(self.coordinator).shown_timers()
 
     def label(self, item: dict[str, Any], words: dict[str, str]) -> str:
         return f"{item['text'] or words['timer']} · {_length(item['minutes'] * 60)}"
@@ -168,7 +195,7 @@ class JblBarRecentMessage(JblBarRecent):
     _attr_icon = "mdi:message-reply-text-outline"
 
     def items(self) -> list[dict[str, Any]]:
-        return tracker(self.coordinator).messages
+        return tracker(self.coordinator).shown_messages()
 
     def label(self, item: dict[str, Any], words: dict[str, str]) -> str:
         if item.get("forever"):
