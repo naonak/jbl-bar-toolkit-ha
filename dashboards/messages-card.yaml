@@ -74,6 +74,42 @@ cards:
             state_not: unavailable
         row:
           entity: button.jbl_message_line_8
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: button.jbl_recent_message_1
+            state_not: unavailable
+        row:
+          type: section
+          label: Recent
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: button.jbl_recent_message_1
+            state_not: unavailable
+        row:
+          entity: button.jbl_recent_message_1
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: button.jbl_recent_message_2
+            state_not: unavailable
+        row:
+          entity: button.jbl_recent_message_2
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: button.jbl_recent_message_3
+            state_not: unavailable
+        row:
+          entity: button.jbl_recent_message_3
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: button.jbl_recent_message_4
+            state_not: unavailable
+        row:
+          entity: button.jbl_recent_message_4
   - type: markdown
     show_empty: false
     content: |

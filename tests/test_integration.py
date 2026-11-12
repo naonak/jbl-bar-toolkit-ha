@@ -12,7 +12,9 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+)
 
 from custom_components.jbl_bar_91.const import DOMAIN
 
@@ -817,3 +819,50 @@ async def test_standby_clock_switch(hass: HomeAssistant, remote) -> None:
     assert when.state == "standby" and when.name == "JBL Bar 9.1 Clock shows", when
     await call(hass, "select", "select_option", "select.jbl_display_clock_when", option="always")
     assert remote.display_log[-1] == ("clock", {"when": "always"}) and remote.clock["when"] == "always"
+
+
+async def test_recent_timers_and_messages(hass: HomeAssistant, remote, hass_storage) -> None:
+    """What showed on the bar, from anywhere, can be started again; kept across a restart."""
+    remote.timers, remote.messages = [], []
+    await setup(hass, remote)
+    assert hass.states.get("button.jbl_recent_timer_1").state == "unavailable"
+    coordinator = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+
+    async def refresh() -> None:
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+    # Started elsewhere (the page): seen as they first show, full length.
+    remote.timers = [{"id": "t1", "text": "PIZZA", "remaining_ms": 719000, "duration_ms": 720000, "countdown": True, "sound": "always", "ringing": False}]
+    remote.messages = [{"id": "plantes", "named": True, "text": "ARROSER", "mode": "passes", "passes_left": 3, "showing": True, "stop_on_key": True},
+                       {"id": "default", "named": False, "text": "COLIS", "mode": "duration", "remaining_ms": 1_790_000, "showing": False}]
+    await refresh()
+    remote.timers[0]["duration_ms"] = 780000  # +1 min later: the recent one keeps the first length
+    remote.messages[0]["passes_left"] = 1
+    await refresh()
+    assert hass.states.get("button.jbl_recent_timer_1").name == "PIZZA · 12 min"
+    assert hass.states.get("button.jbl_recent_message_1").name == "COLIS · 30 min"
+    assert hass.states.get("button.jbl_recent_message_2").name == "ARROSER (plantes) · 3 times"
+    # The same again does not repeat; a new one goes on top.
+    remote.timers = [{"id": "t2", "text": "PIZZA", "remaining_ms": 720000, "duration_ms": 720000, "sound": "off", "ringing": False},
+                     {"id": "t3", "text": "", "remaining_ms": 300000, "duration_ms": 300000, "sound": "unless_tv", "ringing": False}]
+    await refresh()
+    assert [hass.states.get(f"button.jbl_recent_timer_{n}").name for n in (1, 2)] == ["Timer · 5 min", "PIZZA · 12 min"]
+    assert hass.states.get("button.jbl_recent_timer_3").state == "unavailable"
+
+    remote.timers = []
+    await call(hass, "button", "press", "button.jbl_recent_timer_2")
+    assert remote.timers[-1]["text"] == "PIZZA" and remote.timers[-1]["remaining_ms"] == 720000 and remote.timers[-1]["sound"] == "off"
+    await call(hass, "button", "press", "button.jbl_recent_message_2")
+    assert remote.display_log[-1] == ("show", {"text": "ARROSER", "id": "plantes", "repeat": 3, "stop_on_key": True})
+    await call(hass, "button", "press", "button.jbl_recent_message_1")
+    assert remote.display_log[-1] == ("show", {"text": "COLIS", "duration_s": 1800})
+
+    # Kept across a restart.
+    await hass.async_block_till_done()
+    stored = next(v for k, v in hass_storage.items() if k.startswith("jbl_bar_91.recent."))["data"]
+    assert [t["text"] for t in stored["timers"]][:2] == ["", "PIZZA"], stored
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass.states.get("button.jbl_recent_message_2").name == "ARROSER (plantes) · 3 times"

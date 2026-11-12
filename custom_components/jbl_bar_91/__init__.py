@@ -19,6 +19,7 @@ from .entity import (
     smart_mode_memory,
 )
 from .messages import messages_installed
+from .recent import RecentTracker
 from .switch import clock_state
 from .timers import timers_installed
 
@@ -58,6 +59,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry) -> bo
         # Never create Bar 9.1 entities for another bar's toolkit remote.
         raise ConfigEntryError(translation_domain=DOMAIN, translation_key="unsupported_model", translation_placeholders={"model": model})
     entry.runtime_data = coordinator
+    # Recent timers and messages: loaded and listening before the entities, so
+    # that the recent buttons see each update already counted.
+    coordinator.recent = RecentTracker(hass, entry.entry_id)
+    await coordinator.recent.async_load()
+    coordinator.recent.update(coordinator.data)
+    entry.async_on_unload(coordinator.async_add_listener(lambda: coordinator.recent.update(coordinator.data)))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     known = features(coordinator.data)
 

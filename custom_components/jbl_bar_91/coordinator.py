@@ -40,6 +40,7 @@ class JblBarCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client: JblBarClient) -> None:
         super().__init__(hass, LOGGER, name=DOMAIN, config_entry=entry, update_interval=POLL_INTERVAL)
         self.client = client
+        self.recent: Any = None  # recent.RecentTracker, set up by __init__.py
         self._push_task: asyncio.Task | None = None
         # Command sent by Home Assistant and not answered yet.
         self.local_action: str | None = None

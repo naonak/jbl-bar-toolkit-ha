@@ -11,6 +11,7 @@ from .const import DOMAIN
 from .coordinator import JblBarConfigEntry, JblBarCoordinator
 from .entity import JblBarEntity, advanced_controls, setup_controls
 from .lines import LINES, JblBarMessageLine, JblBarTimerLine
+from .recent import RECENT, JblBarRecentMessage, JblBarRecentTimer
 from .messages import messages_installed
 from .timers import timers_installed
 
@@ -38,10 +39,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
     if old := registry.async_get_entity_id(Platform.BUTTON, DOMAIN, f"{entry.unique_id}_clear_unnamed_message"):
         registry.async_remove(old)
     # One button per timer and per message, for dashboard lists (lines.py).
+    # And the recent ones, to start again (recent.py).
     if timers_installed(coordinator.data):
         entities += [JblBarTimerLine(coordinator, n) for n in range(1, LINES + 1)]
+        entities += [JblBarRecentTimer(coordinator, n) for n in range(1, RECENT + 1)]
     if messages_installed(coordinator.data):
         entities += [JblBarMessageLine(coordinator, n) for n in range(1, LINES + 1)]
+        entities += [JblBarRecentMessage(coordinator, n) for n in range(1, RECENT + 1)]
     # Restart the soundbar: in the device's configuration, for when it stops responding.
     entities.append(JblBarRestart(coordinator, "restart"))
     add(entities)

@@ -29,9 +29,11 @@ LINES = 8  # the remote runs at most 8 timers; messages beyond 8 stay on the sum
 
 TEXT = {
     "en": {"timer": "Timer", "ringing": "ringing", "ends": "ends at", "until": "until", "forever": "until cleared",
-           "timer_line": "Timer line", "message_line": "Message line"},
+           "timer_line": "Timer line", "message_line": "Message line",
+           "recent_timer": "Recent timer", "recent_message": "Recent message", "times": "{n} times"},
     "fr": {"timer": "Minuteur", "ringing": "sonne", "ends": "fin à", "until": "jusqu'à", "forever": "jusqu'à effacement",
-           "timer_line": "Ligne de minuteur", "message_line": "Ligne de message"},
+           "timer_line": "Ligne de minuteur", "message_line": "Ligne de message",
+           "recent_timer": "Minuteur récent", "recent_message": "Message récent", "times": "{n} fois"},
 }
 
 
