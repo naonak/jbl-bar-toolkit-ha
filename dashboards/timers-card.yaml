@@ -10,7 +10,7 @@ cards:
       - type: conditional
         conditions:
           - condition: state
-            entity: sensor.jbl_timer_line_1
+            entity: button.jbl_timer_line_1
             state: unavailable
         row:
           type: text
@@ -45,19 +45,50 @@ cards:
             state_not: unavailable
         row:
           entity: button.jbl_timer_line_4
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: button.jbl_timer_line_5
+            state_not: unavailable
+        row:
+          entity: button.jbl_timer_line_5
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: button.jbl_timer_line_6
+            state_not: unavailable
+        row:
+          entity: button.jbl_timer_line_6
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: button.jbl_timer_line_7
+            state_not: unavailable
+        row:
+          entity: button.jbl_timer_line_7
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: button.jbl_timer_line_8
+            state_not: unavailable
+        row:
+          entity: button.jbl_timer_line_8
   - type: markdown
     show_empty: false
     content: |
       {%- set source = expand(integration_entities('jbl_bar_91'))
          | selectattr('attributes.timers', 'defined') | list %}
       {%- if source | count == 0 %}
-      ⚠️ No *Timers* entity: this needs integration 0.7.0 and a bar remote
-      with timers, then a reload of the integration.
-      {%- elif states.sensor.jbl_timer_line_1 is none %}
+      ⚠️ No *Timers* entity: the toolkit remote on the bar has no timers yet.
+      Update it; the integration adds the timers by itself.
+      {%- elif states.input_text.jbl_timer_name is none %}
       ⚠️ The timers package is missing: put timers-package.yaml in your
       packages folder, then restart Home Assistant (see the README).
-      {%- elif source[0].attributes.timers | count > 4 %}
-      And {{ source[0].attributes.timers | count - 4 }} more: *Stop all timers* cancels them too.
+      {%- else %}
+      {%- set n = source[0].attributes.timers | count %}
+      {%- if n > 8 %}
+      And {{ n - 8 }} more: *Stop all timers* cancels them too.
+      {%- endif %}
       {%- endif %}
   - type: grid
     columns: 2

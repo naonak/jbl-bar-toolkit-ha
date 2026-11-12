@@ -8,7 +8,7 @@ import pytest
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import entity_registry as er
@@ -682,7 +682,7 @@ async def test_timer_extend(hass: HomeAssistant, remote) -> None:
 
 
 async def test_display_messages_sensor_and_clear_buttons(hass: HomeAssistant, remote) -> None:
-    """The Messages sensor lists what the remote reports; the buttons clear the unnamed message, or all."""
+    """The Messages sensor lists what the remote reports; a line clears one message, a button all of them."""
     remote.messages = [
         {"id": "default", "named": False, "text": "FRIGO OUVERT", "mode": "passes", "passes_left": 2, "showing": True},
         {"id": "colis", "named": True, "text": "COLIS", "mode": "duration", "remaining_ms": 300000, "showing": False},
@@ -693,7 +693,8 @@ async def test_display_messages_sensor_and_clear_buttons(hass: HomeAssistant, re
     unnamed, colis = state.attributes["messages"]
     assert unnamed["name"] == "" and unnamed["passes_left"] == 2 and unnamed["showing"] and unnamed["ends_at"] is None
     assert colis["name"] == "colis" and colis["mode"] == "duration" and colis["ends_at"] and not colis["showing"]
-    await call(hass, "button", "press", "button.jbl_bar_9_1_clear_unnamed_message")
+    assert hass.states.get("button.jbl_bar_9_1_clear_unnamed_message") is None  # the message lines replace it
+    await call(hass, "button", "press", "button.jbl_message_line_1")
     await call(hass, "button", "press", "button.jbl_bar_9_1_clear_all_messages")
     assert remote.display_log[-2:] == [("cancel", {"id": "default"}), ("cancel", None)]
 
@@ -737,3 +738,55 @@ async def test_restart_button(hass: HomeAssistant, remote) -> None:
     with pytest.raises(HomeAssistantError) as err:
         await call(hass, "button", "press", "button.jbl_bar_9_1_restart")
     assert err.value.translation_key == "restart_unsupported"
+
+
+async def test_lines_in_french_and_the_old_unnamed_button_removed(hass: HomeAssistant, remote) -> None:
+    """Line names follow Home Assistant's language; the button replaced by the lines leaves the registry."""
+    hass.config.language = "fr"
+    registry = er.async_get(hass)
+    old = registry.async_get_or_create("button", DOMAIN, f"{remote.host}_clear_unnamed_message", suggested_object_id="jbl_bar_9_1_clear_unnamed_message")
+    remote.timers = [{"id": "t1", "text": "", "remaining_ms": 600000, "ringing": False}]
+    remote.messages = [{"id": "colis", "named": True, "text": "COLIS", "mode": "duration", "remaining_ms": 300000, "showing": True}]
+    await setup(hass, remote)
+    assert registry.async_get(old.entity_id) is None
+    timer, message = hass.states.get("button.jbl_timer_line_1"), hass.states.get("button.jbl_message_line_1")
+    assert timer.name.startswith("Minuteur – fin à "), timer.name
+    assert message.name.startswith("COLIS (colis) – jusqu'à "), message.name
+    assert hass.states.get("button.jbl_timer_line_2").name == "Ligne de minuteur 2"
+
+
+async def test_events_and_rear_batteries(hass: HomeAssistant, remote) -> None:
+    """Timer and message events fire once per change, never for what was there at start."""
+    remote.timers = [{"id": "t0", "text": "OLD", "remaining_ms": 900000, "ringing": False}]
+    remote.messages = []
+    await setup(hass, remote)
+    assert hass.states.get("sensor.jbl_bar_9_1_rear_left_battery").state == "90"
+    assert hass.states.get("sensor.jbl_bar_9_1_rear_right_battery").attributes["device_class"] == "battery"
+    timer_events, message_events = "event.jbl_bar_9_1_timer_events", "event.jbl_bar_9_1_message_events"
+    assert hass.states.get(timer_events).state == "unknown"  # the timer already running fired nothing
+    coordinator = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    seen: list[tuple[str, str, dict]] = []
+
+    @callback
+    def record(event) -> None:
+        new = event.data["new_state"]
+        if new and new.entity_id in (timer_events, message_events) and new.state not in ("unknown", "unavailable"):
+            seen.append((new.entity_id.split("_")[-2], new.attributes["event_type"], {k: new.attributes[k] for k in ("id",) if k in new.attributes}))
+
+    hass.bus.async_listen("state_changed", record)
+
+    async def step(timers, messages) -> None:
+        remote.timers, remote.messages = timers, messages
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+    await step([{"id": "t0", "text": "OLD", "remaining_ms": 800000, "ringing": False},
+                {"id": "t1", "text": "PIZZA", "remaining_ms": 60000, "ringing": False}],
+               [{"id": "colis", "named": True, "text": "COLIS", "mode": "forever", "showing": True}])
+    await step([{"id": "t0", "text": "OLD", "remaining_ms": 700000, "ringing": False},
+                {"id": "t1", "text": "PIZZA", "remaining_ms": 0, "ringing": True}], [])
+    await step([], [])
+    assert seen == [("timer", "started", {"id": "t1"}), ("message", "shown", {"id": "colis"}),
+                    ("timer", "ringing", {"id": "t1"}), ("message", "ended", {"id": "colis"}),
+                    ("timer", "cancelled", {"id": "t0"}), ("timer", "finished", {"id": "t1"})], seen
+    assert hass.states.get(timer_events).attributes["name"] == "PIZZA"

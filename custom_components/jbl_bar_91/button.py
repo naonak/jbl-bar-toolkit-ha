@@ -10,7 +10,9 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from .const import DOMAIN
 from .coordinator import JblBarConfigEntry, JblBarCoordinator
 from .entity import JblBarEntity, advanced_controls, setup_controls
-from .messages import UNNAMED
+from .lines import LINES, JblBarMessageLine, JblBarTimerLine
+from .messages import messages_installed
+from .timers import timers_installed
 
 BUTTONS = {"standard_mode": ("standard", "mdi:auto-fix"), "bluetooth_pairing": ("bluetooth_pair", "mdi:bluetooth-settings")}
 
@@ -29,9 +31,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
     if setup_controls(coordinator.data):
         entities += [JblBarCalibrate(coordinator, "calibrate", "calibrate", "mdi:surround-sound"),
                      JblBarSubPair(coordinator, "sub_pair", "sub_pair", "mdi:speaker-wireless")]
-    # Clear the bar's display messages (timers are not affected).
-    entities += [JblBarClearMessages(coordinator, "clear_unnamed_message", "mdi:message-minus-outline", {"id": UNNAMED}),
-                 JblBarClearMessages(coordinator, "clear_messages", "mdi:message-off-outline", None)]
+    # Clear every display message (timers are not affected). The button for the
+    # unnamed message alone went away with the message lines: drop it if left over.
+    entities.append(JblBarClearMessages(coordinator, "clear_messages", "mdi:message-off-outline", None))
+    registry = er.async_get(hass)
+    if old := registry.async_get_entity_id(Platform.BUTTON, DOMAIN, f"{entry.unique_id}_clear_unnamed_message"):
+        registry.async_remove(old)
+    # One button per timer and per message, for dashboard lists (lines.py).
+    if timers_installed(coordinator.data):
+        entities += [JblBarTimerLine(coordinator, n) for n in range(1, LINES + 1)]
+    if messages_installed(coordinator.data):
+        entities += [JblBarMessageLine(coordinator, n) for n in range(1, LINES + 1)]
     # Restart the soundbar: in the device's configuration, for when it stops responding.
     entities.append(JblBarRestart(coordinator, "restart"))
     add(entities)
@@ -48,7 +58,7 @@ class JblBarRestart(JblBarEntity, ButtonEntity):
 
 
 class JblBarClearMessages(JblBarEntity, ButtonEntity):
-    """Clear the unnamed message (id default), or every message."""
+    """Clear every message."""
 
     def __init__(self, coordinator: JblBarCoordinator, key: str, icon: str, parameters: dict | None) -> None:
         super().__init__(coordinator, key)

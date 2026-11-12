@@ -13,8 +13,9 @@ from homeassistant.util import dt as dt_util
 
 from .coordinator import JblBarConfigEntry, JblBarCoordinator
 from .entity import JblBarEntity, eq_installed, setup_controls, smart_mode_memory
-from .timers import TimerClock, timers_installed
-from .messages import MessageClock, messages_installed
+from .lines import message_clock, timer_clock
+from .messages import messages_installed
+from .timers import timers_installed
 
 
 def _memory(doc: dict[str, Any]) -> float | None:
@@ -68,6 +69,11 @@ SENSORS = [
     Description(key="wifi_signal", device_class=SensorDeviceClass.SIGNAL_STRENGTH, native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
                 state_class=SensorStateClass.MEASUREMENT, entity_category=DIAG, entity_registry_enabled_default=False,
                 value=lambda d: (d.get("wifi") or {}).get("signal_dbm")),
+    # Rear speakers' batteries, as last reported (they may lag while the speakers are off).
+    Description(key="rear_battery_left", device_class=SensorDeviceClass.BATTERY, native_unit_of_measurement=PERCENTAGE,
+                state_class=SensorStateClass.MEASUREMENT, value=lambda d: (d.get("sound") or {}).get("rear_battery_left")),
+    Description(key="rear_battery_right", device_class=SensorDeviceClass.BATTERY, native_unit_of_measurement=PERCENTAGE,
+                state_class=SensorStateClass.MEASUREMENT, value=lambda d: (d.get("sound") or {}).get("rear_battery_right")),
     Description(key="uptime", device_class=SensorDeviceClass.DURATION, native_unit_of_measurement=UnitOfTime.SECONDS,
                 entity_category=DIAG, entity_registry_enabled_default=False, value=lambda d: d.get("uptime")),
 ]
@@ -117,7 +123,7 @@ class JblBarMessages(JblBarEntity, SensorEntity):
 
     def __init__(self, coordinator: JblBarCoordinator, key: str) -> None:
         super().__init__(coordinator, key)
-        self._clock = MessageClock()
+        self._clock = message_clock(coordinator)
         self._described: list[dict[str, Any]] = []
 
     def _handle_coordinator_update(self) -> None:
@@ -135,14 +141,6 @@ class JblBarMessages(JblBarEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         return {"messages": self._described}
-
-
-def timer_clock(coordinator: JblBarCoordinator) -> TimerClock:
-    """One clock per bar, so that every timer entity shows the same end times."""
-    clock = getattr(coordinator, "timer_clock", None)
-    if clock is None:
-        clock = coordinator.timer_clock = TimerClock()
-    return clock
 
 
 class JblBarTimers(JblBarEntity, SensorEntity):

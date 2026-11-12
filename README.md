@@ -46,6 +46,9 @@ Then: *Settings → Devices & services → Add integration → JBL Bar Toolkit (
 | Standard mode | Button, only with older remotes (replaced by the Smart mode switch) |
 | Sound mode, Bluetooth device, Bluetooth audio | Sensors |
 | Rear speakers docked, Bluetooth connected | Binary sensors |
+| Rear left battery, Rear right battery | Battery level of each rear speaker (%), as last reported: it may lag while the speakers are off. For low-battery automations |
+| Timer events, Message events | Event entities for automations: `started`, `ringing`, `finished` (it rang) and `cancelled` (stopped before ringing) for timers; `shown` and `ended` for messages. Data: `id` and `name` (timers), `id`, `text`, `named` (messages). Nothing fires for what is already there at start |
+| Timer line 1–8, Message line 1–8 | Buttons `button.jbl_timer_line_N` / `button.jbl_message_line_N`: line N is the Nth timer (first to end first, a ringing one on top) or message, named after it (`Pizza – ends at 18:54`, `CALL GRANDMA – until cleared`); pressing it cancels that timer or clears that message. Unavailable when empty, so a dashboard hides it |
 | CPU, Memory used, Temperature, Wi-Fi signal, Uptime | Diagnostics (the last two disabled by default) |
 
 ## Messages on the display
@@ -61,8 +64,8 @@ Two services show your own text on the bar's front display, on or in standby, wi
   - `id`: a message with the same id replaces it. Messages with different ids take turns, pass by pass, each with its own repeat, duration or forever: `Hello` ×3 and `Goodbye` ×2 show Hello, Goodbye, Hello, Goodbye, Hello.
 - `jbl_bar_91.display_cancel` stops the message with `id`, or every message (timers are not affected). A message sent without an `id`, by `display_message` or the notify entity, has the id `default`: there is one at a time, and `id: default` clears it.
 - `clear_on_key: true` on `display_message` lets whoever reads the message clear it with any key on the JBL remote (toolkit remotes with the Messages panel). With `forever: true`, the message stays until it is seen.
-- The buttons **Clear unnamed message** and **Clear all messages** do the same from a dashboard or an automation.
-- **Dashboard template.** [`dashboards/messages-card.yaml`](dashboards/messages-card.yaml) lists the messages on the bar, one line each with a **Press** button that clears that message only, leaves one (text, how long, clear with a key) and clears them all. It needs [`dashboards/messages-package.yaml`](dashboards/messages-package.yaml): see [Dashboard templates](#dashboard-templates).
+- The button **Clear all messages** clears them all; the **Message line** buttons clear one each.
+- **Dashboard template.** [`dashboards/messages-card.yaml`](dashboards/messages-card.yaml) lists the messages on the bar, one line each (the **Message line** buttons: pressing one clears that message), leaves one (text, how long, clear with a key) and clears them all. It needs [`dashboards/messages-package.yaml`](dashboards/messages-package.yaml): see [Dashboard templates](#dashboard-templates).
 - With a toolkit remote that lists them (the Messages panel), the **Messages** sensor gives how many messages are on the display or waiting, and the `messages` attribute each one: `id`, `name` (empty for the unnamed one), `text` as shown, `mode` (`passes`, `duration` or `forever`), `passes_left`, `ends_at` and `showing`.
 
 The bar's own messages (volume, `HELLO` at wake-up…) come first: yours waits, then shows the interrupted pass again. A 1.5 s blank separates passes. Example, the fridge door:
@@ -123,14 +126,30 @@ With a toolkit remote that has timers (`bar91.timer`, November 2026), the bar ca
   - **Timers**: the number of timers, with each one in the `timers` attribute (`id`, `name`, `ends_at`, `ringing`, `countdown`, `sound`, and `duration_s` from start to end, time added included);
   - **Next timer**: a timestamp, so dashboards show it as a countdown;
   - **Timer ringing**: on while one rings; handy to tell a phone too.
+  - **Timer events**: `started`, `ringing`, `finished`, `cancelled`, with the timer's `name`. For example, tell a phone when a timer rings:
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: event.jbl_bar_9_1_timer_events
+conditions:
+  - condition: state
+    entity_id: event.jbl_bar_9_1_timer_events
+    attribute: event_type
+    state: ringing
+actions:
+  - action: notify.mobile_app_my_phone
+    data:
+      message: "{{ state_attr('event.jbl_bar_9_1_timer_events', 'name') or 'Timer' }} is ringing"
+```
 
 **Dashboard template.** [`dashboards/timers-card.yaml`](dashboards/timers-card.yaml) is a card with:
-- the running timers, one line each with its end time and the time left, or *ringing*, and a **Press** button that cancels that timer only, at once (the buttons are `button.jbl_timer_line_N`, shown as entity rows so the line follows the timer; Home Assistant names their action *Press*);
+- the running timers, one line each with its end time, or *ringing*: the **Timer line** buttons, pressing one cancels that timer at once (Home Assistant names the action *Press*);
 - 1/5/10/15-minute buttons;
 - a custom timer (name, minutes, sound, time left);
 - *+1 min* for the next timer, and *Stop all timers*, with a confirmation.
 
-It needs [`dashboards/timers-package.yaml`](dashboards/timers-package.yaml): see [Dashboard templates](#dashboard-templates). The package adds `sensor.jbl_timer_line_1` to `sensor.jbl_timer_line_4`, the running timers in order (first to end first, a ringing one on top), and the script `script.jbl_timer_cancel_slot` that the Cancel buttons call; the card lists four timers, and says how many more run beyond them.
+It needs [`dashboards/timers-package.yaml`](dashboards/timers-package.yaml): see [Dashboard templates](#dashboard-templates). The lines come from the integration (0.11.0); the card lists eight, and says how many more run beyond them.
 
 ## Dashboard templates
 
@@ -168,7 +187,7 @@ Do not paste both into one file, and do not replace one with the other: each fil
 
 **4. Add the cards.** On a dashboard: Edit › Add card › *Manual*, then paste the contents of the card file. To show both in one card, put the `cards` of both under a single `vertical-stack`.
 
-If a card shows *Entity not found*, or *The timers package is missing*, its package is not loaded: check the file is in `/config/packages`, the configuration check, then restart again. If it shows *No Timers entity* or *No Messages entity*, the integration or the toolkit remote on the bar is older than the feature. When the bar's remote is updated while Home Assistant runs, the integration reloads by itself to add the new entities. Updating from a template of before 0.10.2 (lines named after an old timer or message)? The lines are now `sensor.jbl_timer_line_N` / `button.jbl_timer_line_N` and `sensor.jbl_message_line_N` / `button.jbl_message_line_N`: replace both packages and the cards, restart, then delete the old `sensor.jbl_timer_1`… and `sensor.jbl_message_1`… left in Settings › Entities.
+If a card shows *Entity not found*, or *The timers package is missing*, its package is not loaded: check the file is in `/config/packages`, the configuration check, then restart again. If it shows *No Timers entity* or *No Messages entity*, the integration or the toolkit remote on the bar is older than the feature. When the bar's remote is updated while Home Assistant runs, the integration reloads by itself to add the new entities. Updating from the templates of 0.10.x? Their packages made the lines themselves; from 0.11.0 the integration does. Replace both packages and the cards with the new ones, restart, then delete the old `sensor.jbl_timer_line_N`, `sensor.jbl_message_line_N` (and `sensor.jbl_timer_N`, `sensor.jbl_message_N`) left in Settings › Entities. If the new buttons are named `…_line_1_2`, an old package was still loaded: replace it, restart, and rename them.
 
 ## Restart
 
@@ -215,9 +234,9 @@ Tests run Home Assistant against a fake remote that enforces the real API rules 
 
 Intégration Home Assistant pour la **JBL Bar 9.1**, via la télécommande web locale de [kisinga/jbl-bar-toolkit](https://github.com/kisinga/jbl-bar-toolkit) (dépôt anciennement `naonak/jbl-bar-9.1-ha` : mettez à jour l'URL du dépôt personnalisé dans HACS, les entités ne changent pas). Installez d'abord cette télécommande sur la barre, avec un `allowed_cidr` qui inclut l'adresse de Home Assistant. Ajoutez ensuite ce dépôt dans HACS (*Dépôts personnalisés*, catégorie *Intégration*), installez-le, redémarrez, puis ajoutez l'intégration en saisissant l'IP de la barre. Seule la Bar 9.1 est prise en charge : l'intégration vérifie le modèle annoncé par la télécommande et refuse une autre barre. L'interface est traduite en français.
 
-**Messages sur l'écran.** Les services `jbl_bar_91.display_message` et `jbl_bar_91.display_cancel` affichent un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. Le message accepte 31 caractères ; il est converti en majuscules sans accent. On peut le répéter (`repeat`), l'afficher pendant une durée (`duration`) ou jusqu'à annulation (`forever`). Un message avec le même `id` remplace le précédent : « Frigo fermé » remplace ainsi « Frigo ouvert ». Des messages d'`id` différents s'affichent à tour de rôle, passage par passage, chacun avec ses propres répétitions, sa durée ou son « jusqu'à annulation ». Un message sans `id` (y compris ceux de l'entité de notification) a l'identifiant `default` : `display_cancel` avec `id: default` l'efface, et sans `id` tous les messages (pas les minuteurs). Avec `clear_on_key: true`, n'importe quelle touche de la télécommande JBL efface le message, signe qu'il a été vu. Les boutons **Effacer le message sans nom** et **Effacer tous les messages** font de même, et le capteur **Messages** liste ceux en cours, avec une télécommande récente.
+**Messages sur l'écran.** Les services `jbl_bar_91.display_message` et `jbl_bar_91.display_cancel` affichent un texte sur l'écran de la barre, allumée ou en veille, sans la réveiller. Le message accepte 31 caractères ; il est converti en majuscules sans accent. On peut le répéter (`repeat`), l'afficher pendant une durée (`duration`) ou jusqu'à annulation (`forever`). Un message avec le même `id` remplace le précédent : « Frigo fermé » remplace ainsi « Frigo ouvert ». Des messages d'`id` différents s'affichent à tour de rôle, passage par passage, chacun avec ses propres répétitions, sa durée ou son « jusqu'à annulation ». Un message sans `id` (y compris ceux de l'entité de notification) a l'identifiant `default` : `display_cancel` avec `id: default` l'efface, et sans `id` tous les messages (pas les minuteurs). Avec `clear_on_key: true`, n'importe quelle touche de la télécommande JBL efface le message, signe qu'il a été vu. Le bouton **Effacer tous les messages** les efface tous, chaque bouton **Ligne de message** un seul, et le capteur **Messages** liste ceux en cours, avec une télécommande récente.
 
-**Minuteurs.** `jbl_bar_91.timer_start` lance un minuteur sur la barre (durée, nom, temps restant affiché, son à la fin, volume minimum, durée de sonnerie). `jbl_bar_91.timer_cancel` l'arrête par nom, par identifiant ou tous. `jbl_bar_91.timer_extend` ajoute du temps à un minuteur en cours (1 minute par défaut), par nom ou identifiant, sinon au prochain à se terminer. À la fin, `TIME'S UP` et le nom défilent jusqu'à l'appui sur une touche de la télécommande JBL. Les entités *Minuteurs*, *Prochain minuteur* (compte à rebours) et *Minuteur qui sonne* servent au suivi. Un modèle de tableau de bord est fourni dans `dashboards/` : il trouve lui-même les entités de la barre, quelle que soit la langue. Chaque minuteur en cours y a sa ligne avec un bouton **Appuyer** qui l'annule, et chaque message de la carte des messages un bouton **Appuyer** qui l'efface, sans confirmation, grâce aux entités `button.jbl_timer_line_N` et `button.jbl_message_line_N` des packages. Exemple ci-dessus. L'entité de notification *Écran* (`notify.jbl_bar_9_1_ecran`) sert de cible à `notify.send_message` : chaque notification passe deux fois, et le titre est placé devant le message s'il tient dans les 31 caractères. Elle peut entrer dans un groupe de notifications, avec votre téléphone par exemple.
+**Minuteurs.** `jbl_bar_91.timer_start` lance un minuteur sur la barre (durée, nom, temps restant affiché, son à la fin, volume minimum, durée de sonnerie). `jbl_bar_91.timer_cancel` l'arrête par nom, par identifiant ou tous. `jbl_bar_91.timer_extend` ajoute du temps à un minuteur en cours (1 minute par défaut), par nom ou identifiant, sinon au prochain à se terminer. À la fin, `TIME'S UP` et le nom défilent jusqu'à l'appui sur une touche de la télécommande JBL. Les entités *Minuteurs*, *Prochain minuteur* (compte à rebours) et *Minuteur qui sonne* servent au suivi. Un modèle de tableau de bord est fourni dans `dashboards/` : il trouve lui-même les entités de la barre, quelle que soit la langue. Chaque minuteur en cours y a sa ligne avec un bouton **Appuyer** qui l'annule, et chaque message de la carte des messages un bouton **Appuyer** qui l'efface, sans confirmation : ce sont les boutons **Ligne de minuteur** et **Ligne de message** de l'intégration (`button.jbl_timer_line_N`, `button.jbl_message_line_N`, 8 de chaque). Exemple ci-dessus. L'entité de notification *Écran* (`notify.jbl_bar_9_1_ecran`) sert de cible à `notify.send_message` : chaque notification passe deux fois, et le titre est placé devant le message s'il tient dans les 31 caractères. Elle peut entrer dans un groupe de notifications, avec votre téléphone par exemple.
 
 **Modèles de tableau de bord.** Chaque carte (`dashboards/timers-card.yaml`, `dashboards/messages-card.yaml`) a besoin de son *package* (`timers-package.yaml`, `messages-package.yaml`) :
 1. dans `configuration.yaml`, ajoutez une seule fois `packages: !include_dir_named packages` sous `homeassistant:`, puis créez le dossier `/config/packages` ;
@@ -226,6 +245,8 @@ Intégration Home Assistant pour la **JBL Bar 9.1**, via la télécommande web l
 4. dans un tableau de bord, Modifier › Ajouter une carte › Manuel, et collez la carte.
 
 Quand la télécommande de la barre est mise à jour pendant que Home Assistant tourne (minuteurs, messages…), l'intégration se recharge d'elle-même pour ajouter les nouvelles entités.
+
+**Événements et batteries.** Les entités *Événements des minuteurs* (`started` lancé, `ringing` sonne, `finished` terminé après avoir sonné, `cancelled` annulé avant) et *Événements des messages* (`shown` affiché, `ended` terminé) servent de déclencheurs d'automatisation, par exemple une notification sur le téléphone quand la pizza sonne. *Batterie arrière gauche* et *droite* donnent la charge des enceintes arrière (dernière valeur connue).
 
 « Entité non trouvée » sur une carte veut dire que son package n'est pas chargé. Des versions françaises de ces fichiers, avec des libellés français, se font en traduisant les `name:` et textes ; les identifiants ne changent pas.
 

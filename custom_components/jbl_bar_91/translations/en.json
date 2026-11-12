@@ -100,9 +100,6 @@
       "sub_pair": {
         "name": "Pair subwoofer"
       },
-      "clear_unnamed_message": {
-        "name": "Clear unnamed message"
-      },
       "clear_messages": {
         "name": "Clear all messages"
       },
@@ -173,6 +170,12 @@
       },
       "messages": {
         "name": "Messages"
+      },
+      "rear_battery_left": {
+        "name": "Rear left battery"
+      },
+      "rear_battery_right": {
+        "name": "Rear right battery"
       }
     },
     "binary_sensor": {
@@ -192,6 +195,32 @@
     "notify": {
       "display": {
         "name": "Display"
+      }
+    },
+    "event": {
+      "timer_events": {
+        "name": "Timer events",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "started": "Started",
+              "ringing": "Ringing",
+              "finished": "Finished",
+              "cancelled": "Cancelled"
+            }
+          }
+        }
+      },
+      "message_events": {
+        "name": "Message events",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "shown": "Shown",
+              "ended": "Ended"
+            }
+          }
+        }
       }
     }
   },

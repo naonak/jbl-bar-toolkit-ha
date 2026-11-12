@@ -100,9 +100,6 @@
       "sub_pair": {
         "name": "Appairer le caisson"
       },
-      "clear_unnamed_message": {
-        "name": "Effacer le message sans nom"
-      },
       "clear_messages": {
         "name": "Effacer tous les messages"
       },
@@ -173,6 +170,12 @@
       },
       "messages": {
         "name": "Messages"
+      },
+      "rear_battery_left": {
+        "name": "Batterie arrière gauche"
+      },
+      "rear_battery_right": {
+        "name": "Batterie arrière droite"
       }
     },
     "binary_sensor": {
@@ -192,6 +195,32 @@
     "notify": {
       "display": {
         "name": "Écran"
+      }
+    },
+    "event": {
+      "timer_events": {
+        "name": "Événements des minuteurs",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "started": "Lancé",
+              "ringing": "Sonne",
+              "finished": "Terminé",
+              "cancelled": "Annulé"
+            }
+          }
+        }
+      },
+      "message_events": {
+        "name": "Événements des messages",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "shown": "Affiché",
+              "ended": "Terminé"
+            }
+          }
+        }
       }
     }
   },

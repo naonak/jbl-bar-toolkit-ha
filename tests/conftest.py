@@ -78,7 +78,7 @@ class FakeRemote:
             "available": True, "power": s["power"], "mode": self.mode, "volume": s["volume"], "muted": s["muted"],
             "input": s["input"], "source_state": {"TV / ARC": 0, "Bluetooth": 2, "HDMI": 3}.get(s["input"], 6), "csrf": s["csrf"], "uptime": 1234, "media_controls": s["controls"],
             "sound": {"night": s["night"], "bass": s["bass"], "atmos": s["atmos"], "rear": s["rear"],
-                      "rear_docked": self.rear_docked, "center": s["center"],
+                      "rear_docked": self.rear_docked, "center": s["center"], "rear_battery_left": 90, "rear_battery_right": 15,
                       **({"av_sync_ms": self.av_sync} if self.advanced else {}),
                       **({"audio_format": "DOLBY SURROUND DD+"} if self.setup is not None and s["power"] == "On" else {})},
             **({"setup": self.setup} if self.setup is not None else {}),

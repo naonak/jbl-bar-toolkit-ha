@@ -10,7 +10,7 @@ cards:
       - type: conditional
         conditions:
           - condition: state
-            entity: sensor.jbl_message_line_1
+            entity: button.jbl_message_line_1
             state: unavailable
         row:
           type: text
@@ -45,19 +45,50 @@ cards:
             state_not: unavailable
         row:
           entity: button.jbl_message_line_4
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: button.jbl_message_line_5
+            state_not: unavailable
+        row:
+          entity: button.jbl_message_line_5
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: button.jbl_message_line_6
+            state_not: unavailable
+        row:
+          entity: button.jbl_message_line_6
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: button.jbl_message_line_7
+            state_not: unavailable
+        row:
+          entity: button.jbl_message_line_7
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: button.jbl_message_line_8
+            state_not: unavailable
+        row:
+          entity: button.jbl_message_line_8
   - type: markdown
     show_empty: false
     content: |
       {%- set source = expand(integration_entities('jbl_bar_91'))
          | selectattr('attributes.messages', 'defined') | list %}
       {%- if source | count == 0 %}
-      ⚠️ No *Messages* entity: this needs integration 0.9.0 and a bar remote
-      with the Messages panel (reload the integration after updating the bar).
-      {%- elif states.sensor.jbl_message_line_1 is none %}
+      ⚠️ No *Messages* entity: the toolkit remote on the bar has no Messages
+      panel yet. Update it; the integration adds the messages by itself.
+      {%- elif states.input_text.jbl_message_text is none %}
       ⚠️ The messages package is missing: put messages-package.yaml in your
       packages folder, then restart Home Assistant (see the README).
-      {%- elif source[0].attributes.messages | count > 4 %}
-      And {{ source[0].attributes.messages | count - 4 }} more: *Clear all messages* clears them too.
+      {%- else %}
+      {%- set n = source[0].attributes.messages | count %}
+      {%- if n > 8 %}
+      And {{ n - 8 }} more: *Clear all messages* clears them too.
+      {%- endif %}
       {%- endif %}
   - type: entities
     title: Leave a message

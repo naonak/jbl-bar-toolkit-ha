@@ -2,104 +2,7 @@
 # Put this file in your packages folder (like timers-package.yaml), for example
 # /config/packages/jbl_messages.yaml, then restart Home Assistant. The scripts
 # find the bar themselves: no entity id to adapt.
-# sensor.jbl_message_line_1 to _4 are the messages on the bar, one each, in the
-# order the bar shows them, for the card's Clear buttons. Unavailable when
-# empty. The *name, *state… lines reuse the first sensor's templates.
-# No unique_id on purpose: dashboards name a registered entity from the entity
-# registry, which keeps an old name; unregistered, the card shows the live name.
-# button.jbl_message_line_N clear line N: the card shows them as entity rows, which
-# redraw when the name changes (a plain button row keeps the name of page load).
-template:
-  - sensor:
-      - default_entity_id: sensor.jbl_message_line_1
-        variables: {slot: 1}
-        name: &name >-
-          {%- set all = expand(integration_entities('jbl_bar_91'))
-             | selectattr('attributes.messages', 'defined') | map(attribute='attributes.messages') | first | default([]) %}
-          {%- set m = all[slot - 1] if all | count >= slot else none %}
-          {%- if m is none %}Message {{ slot }}
-          {%- else %}
-          {{- m.text }}{{ ' (' ~ m.name ~ ')' if m.name }} – {{ 'showing' if m.showing else 'waiting' }},
-          {%- if m.mode == 'forever' %} until cleared
-          {%- elif m.mode == 'duration' and m.ends_at %} until {{ as_timestamp(m.ends_at) | timestamp_custom('%H:%M') }}
-          {%- elif m.passes_left == 1 %} last time
-          {%- else %} {{ m.passes_left }} times left
-          {%- endif %}
-          {%- endif %}
-        state: &state >-
-          {%- set all = expand(integration_entities('jbl_bar_91'))
-             | selectattr('attributes.messages', 'defined') | map(attribute='attributes.messages') | first | default([]) %}
-          {{ ('showing' if all[slot - 1].showing else 'waiting') if all | count >= slot else none }}
-        availability: &availability >-
-          {{ expand(integration_entities('jbl_bar_91'))
-             | selectattr('attributes.messages', 'defined') | map(attribute='attributes.messages') | first | default([])
-             | count >= slot }}
-        icon: &icon >-
-          {%- set all = expand(integration_entities('jbl_bar_91'))
-             | selectattr('attributes.messages', 'defined') | map(attribute='attributes.messages') | first | default([]) %}
-          {{ 'mdi:message-text' if all | count >= slot and all[slot - 1].showing else 'mdi:message-text-clock-outline' }}
-        attributes:
-          message_id: &message_id >-
-            {%- set all = expand(integration_entities('jbl_bar_91'))
-               | selectattr('attributes.messages', 'defined') | map(attribute='attributes.messages') | first | default([]) %}
-            {{ all[slot - 1].id if all | count >= slot else '' }}
-      - default_entity_id: sensor.jbl_message_line_2
-        variables: {slot: 2}
-        name: *name
-        state: *state
-        availability: *availability
-        icon: *icon
-        attributes:
-          message_id: *message_id
-      - default_entity_id: sensor.jbl_message_line_3
-        variables: {slot: 3}
-        name: *name
-        state: *state
-        availability: *availability
-        icon: *icon
-        attributes:
-          message_id: *message_id
-      - default_entity_id: sensor.jbl_message_line_4
-        variables: {slot: 4}
-        name: *name
-        state: *state
-        availability: *availability
-        icon: *icon
-        attributes:
-          message_id: *message_id
-    button:
-      - default_entity_id: button.jbl_message_line_1
-        variables: {slot: 1}
-        name: *name
-        availability: *availability
-        icon: *icon
-        press:
-          - action: script.jbl_message_cancel_slot
-            data: {slot: 1}
-      - default_entity_id: button.jbl_message_line_2
-        variables: {slot: 2}
-        name: *name
-        availability: *availability
-        icon: *icon
-        press:
-          - action: script.jbl_message_cancel_slot
-            data: {slot: 2}
-      - default_entity_id: button.jbl_message_line_3
-        variables: {slot: 3}
-        name: *name
-        availability: *availability
-        icon: *icon
-        press:
-          - action: script.jbl_message_cancel_slot
-            data: {slot: 3}
-      - default_entity_id: button.jbl_message_line_4
-        variables: {slot: 4}
-        name: *name
-        availability: *availability
-        icon: *icon
-        press:
-          - action: script.jbl_message_cancel_slot
-            data: {slot: 4}
+
 input_text:
   jbl_message_text:
     name: Message
@@ -165,16 +68,7 @@ script:
           entity_id: input_text.jbl_message_text
         data:
           value: ""
-  jbl_message_clear_unnamed:
-    alias: Clear the unnamed message
-    icon: mdi:message-minus-outline
-    sequence:
-      - action: jbl_bar_91.display_cancel
-        target:
-          entity_id: >-
-            {{ integration_entities('jbl_bar_91') | select('match', 'media_player[.]') | first }}
-        data:
-          id: default
+
   jbl_message_clear_all:
     alias: Clear all messages
     icon: mdi:message-off-outline
@@ -183,24 +77,3 @@ script:
         target:
           entity_id: >-
             {{ integration_entities('jbl_bar_91') | select('match', 'media_player[.]') | first }}
-  jbl_message_cancel_slot:
-    alias: Clear one message
-    icon: mdi:message-minus-outline
-    fields:
-      slot:
-        name: Line
-        description: The number of sensor.jbl_message_line_N, as on the card's line.
-        required: true
-        selector:
-          number: {min: 1, max: 4}
-    sequence:
-      - variables:
-          message_id: "{{ state_attr('sensor.jbl_message_line_' ~ (slot | int(0)), 'message_id') }}"
-      - condition: template
-        value_template: "{{ message_id not in [none, ''] }}"
-      - action: jbl_bar_91.display_cancel
-        target:
-          entity_id: >-
-            {{ integration_entities('jbl_bar_91') | select('match', 'media_player[.]') | first }}
-        data:
-          id: "{{ message_id }}"
