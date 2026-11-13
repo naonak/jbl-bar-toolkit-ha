@@ -747,7 +747,7 @@ async def test_lines_in_french_and_the_old_unnamed_button_removed(hass: HomeAssi
     hass.config.language = "fr"
     registry = er.async_get(hass)
     old = registry.async_get_or_create("button", DOMAIN, f"{remote.host}_clear_unnamed_message", suggested_object_id="jbl_bar_9_1_clear_unnamed_message")
-    remote.timers = [{"id": "t1", "text": "", "remaining_ms": 600000, "ringing": False}]
+    remote.timers = [{"id": "t1", "text": "", "remaining_ms": 600000, "duration_ms": 600000, "ringing": False}]
     remote.messages = [{"id": "colis", "named": True, "text": "COLIS", "mode": "duration", "remaining_ms": 300000, "showing": True}]
     await setup(hass, remote)
     assert registry.async_get(old.entity_id) is None
@@ -755,6 +755,14 @@ async def test_lines_in_french_and_the_old_unnamed_button_removed(hass: HomeAssi
     assert timer.name.startswith("Minuteur – fin à "), timer.name
     assert message.name.startswith("COLIS (colis) – jusqu'à "), message.name
     assert hass.states.get("button.jbl_timer_line_2").name == "Ligne de minuteur 2"
+    # For live countdowns: the end and the length, steady from one poll to the next.
+    attributes = timer.attributes
+    assert attributes["ringing"] is False and attributes["ends_at"] and attributes["duration_s"] == 600, attributes
+    coordinator = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert hass.states.get("button.jbl_timer_line_1").attributes["ends_at"] == attributes["ends_at"]
+    assert hass.states.get("button.jbl_timer_line_2").state == "unavailable"
 
 
 async def test_events_and_rear_batteries(hass: HomeAssistant, remote) -> None:

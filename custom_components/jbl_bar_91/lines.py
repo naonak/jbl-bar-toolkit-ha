@@ -144,6 +144,17 @@ class JblBarTimerLine(JblBarLine):
         item = self._item()
         return "mdi:bell-ring" if item and item["ringing"] else "mdi:timer-outline"
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Also the timer's end and full length, for live countdowns and progress bars.
+
+        Neither moves with the time (only +1 min changes them), so the state is
+        not rewritten every poll.
+        """
+        item = self._item() or {}
+        return {**super().extra_state_attributes, "name": item.get("name"), "ringing": bool(item.get("ringing")),
+                "ends_at": item.get("ends_at"), "duration_s": item.get("duration_s")}
+
     async def async_press(self) -> None:
         if item := self._item():
             await self.extension_action(TIMER, "cancel", {"id": item["id"]}, "timer_unsupported")
