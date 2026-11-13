@@ -875,9 +875,25 @@ async def test_recent_timers_and_messages(hass: HomeAssistant, remote, hass_stor
     # Kept across a restart.
     await hass.async_block_till_done()
     stored = next(v for k, v in hass_storage.items() if k.startswith("jbl_bar_91.recent."))["data"]
-    assert [t["text"] for t in stored["timers"]][:2] == ["", "PIZZA"], stored
+    assert [t["text"] for t in stored["timers"]][:2] == ["PIZZA", ""], stored  # started again: back on top
     remote.timers, remote.messages = [], []
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
     assert names("message") == ["COLIS · 30 min", "ARROSER (plantes) · 3 times"]
+
+
+async def test_lines_and_recent_stay_out_of_the_registry(hass: HomeAssistant, remote) -> None:
+    """Dashboards name registered entities from the registry (device name first, maybe stale): these are not registered."""
+    registry = er.async_get(hass)
+    old = registry.async_get_or_create("button", DOMAIN, f"{remote.host}_timer_line_1", suggested_object_id="jbl_timer_line_1")
+    remote.timers, remote.messages = [], []
+    await setup(hass, remote)
+    assert registry.async_get(old.entity_id) is None or registry.async_get(old.entity_id).unique_id != old.unique_id
+    for entity_id in ("button.jbl_timer_line_1", "button.jbl_message_line_8", "button.jbl_recent_timer_1", "button.jbl_recent_message_4"):
+        assert hass.states.get(entity_id) is not None, entity_id  # the id itself, not …_2
+        assert registry.async_get(entity_id) is None, entity_id
+    await call(hass, DOMAIN, "timer_start", "media_player.jbl_bar_9_1", duration={"minutes": 10}, name="Pizza3")
+    await hass.async_block_till_done()
+    assert hass.states.get("button.jbl_timer_line_1").name.startswith("PIZZA3 – ends at ")
+    assert hass.states.get("button.jbl_recent_timer_1").state == "unavailable"  # running: not among the recent ones

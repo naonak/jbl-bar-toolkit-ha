@@ -5,9 +5,9 @@ message, as the remote lists them; pressing it cancels that timer or clears
 that message. An empty line is unavailable, so dashboards hide it.
 
 A dashboard entity row draws the entity's live name, so the name is the line's
-text. It only changes when the line shows another timer or message (never with
-the time left or the passes left): Home Assistant records each new name, and
-warns about an entity renamed more than 100 times an hour.
+text: the lines stay out of the entity registry (see unregistered). It only
+changes when the line shows another timer or message, never with the time or
+passes left.
 
 The entity ids are suggested as button.jbl_timer_line_N / button.jbl_message_line_N
 so that dashboard templates can name them in any language.
@@ -77,6 +77,19 @@ def message_label(m: dict[str, Any], words: dict[str, str]) -> str:
     return label
 
 
+def unregistered(entity: JblBarEntity) -> None:
+    """Keep a line out of the entity registry.
+
+    Dashboards name a registered entity from the registry (its device's name,
+    then its own, as last recorded), not from its live state: the lines would
+    show "JBL Bar 9.1 …" and could lag behind. Unregistered, a dashboard shows
+    the live name. Such an entity has no device page entry and cannot be
+    renamed from the UI, which these lines do not need.
+    """
+    entity._attr_unique_id = None
+    entity._attr_device_info = None
+
+
 class JblBarLine(JblBarEntity, ButtonEntity):
     """Line `index` (1-based) of the timers or messages."""
 
@@ -88,6 +101,7 @@ class JblBarLine(JblBarEntity, ButtonEntity):
         self._attr_translation_key = None
         self._index = index
         self.entity_id = f"button.jbl_{self.kind}_line_{index}"
+        unregistered(self)
 
     def items(self) -> list[dict[str, Any]]:
         raise NotImplementedError

@@ -36,8 +36,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
     # unnamed message alone went away with the message lines: drop it if left over.
     entities.append(JblBarClearMessages(coordinator, "clear_messages", "mdi:message-off-outline", None))
     registry = er.async_get(hass)
-    if old := registry.async_get_entity_id(Platform.BUTTON, DOMAIN, f"{entry.unique_id}_clear_unnamed_message"):
-        registry.async_remove(old)
+    # The lines and recent ones were registered up to 0.12.1: free their entity ids.
+    old_keys = ["clear_unnamed_message"] + [f"{kind}_line_{n}" for kind in ("timer", "message") for n in range(1, LINES + 1)] \
+        + [f"recent_{kind}_{n}" for kind in ("timer", "message") for n in range(1, RECENT + 1)]
+    for key in old_keys:
+        if old := registry.async_get_entity_id(Platform.BUTTON, DOMAIN, f"{entry.unique_id}_{key}"):
+            registry.async_remove(old)
     # One button per timer and per message, for dashboard lists (lines.py).
     # And the recent ones, to start again (recent.py).
     if timers_installed(coordinator.data):

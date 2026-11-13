@@ -22,7 +22,7 @@ from homeassistant.helpers.storage import Store
 
 from .coordinator import JblBarCoordinator
 from .entity import JblBarEntity
-from .lines import TEXT, texts
+from .lines import TEXT, texts, unregistered
 from .messages import message_list
 from .timers import TIMER, timer_list
 
@@ -144,6 +144,7 @@ class JblBarRecent(JblBarEntity, ButtonEntity):
         super().__init__(coordinator, f"recent_{self.kind}_{index}")
         self._index = index
         self.entity_id = f"button.jbl_recent_{self.kind}_{index}"
+        unregistered(self)
 
     def items(self) -> list[dict[str, Any]]:
         raise NotImplementedError
