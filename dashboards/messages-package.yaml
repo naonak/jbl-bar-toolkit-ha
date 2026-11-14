@@ -93,7 +93,9 @@ script:
 # (switch.jbl_display_clock, toolkit remote with the clock) is on from "Clock
 # from" to "Clock until", every day; the same time in both = all day. Over
 # midnight works (22:00 to 07:00). Turning the schedule off leaves the clock as
-# it is.
+# it is. It acts at those two times and when the schedule is changed, never
+# when Home Assistant starts: a clock turned off by hand stays off until the
+# next time. A bar out of reach at that time gets it once back.
 automation:
   - id: jbl_clock_schedule
     alias: "JBL clock on a schedule"
@@ -108,18 +110,18 @@ automation:
           - input_boolean.jbl_clock_scheduled
           - input_datetime.jbl_clock_from
           - input_datetime.jbl_clock_until
-      - trigger: state
-        entity_id: switch.jbl_display_clock
-        from: unavailable
-      - trigger: homeassistant
-        event: start
     conditions:
       - condition: state
         entity_id: input_boolean.jbl_clock_scheduled
         state: "on"
+      # A changed setting, not a helper set up again (reload): that has no previous state.
       - condition: template
-        value_template: "{{ states('switch.jbl_display_clock') in ['on', 'off'] }}"
+        value_template: "{{ trigger.platform != 'state' or trigger.from_state is not none }}"
     actions:
+      # The bar out of reach (unplugged, restarting): wait for it, until the next time.
+      - wait_template: "{{ states('switch.jbl_display_clock') in ['on', 'off'] }}"
+        timeout: "24:00:00"
+        continue_on_timeout: false
       - variables:
           start: "{{ states('input_datetime.jbl_clock_from') }}"
           end: "{{ states('input_datetime.jbl_clock_until') }}"

@@ -1,10 +1,12 @@
 """The dashboard template: the card's text and the package's scripts, against the fake remote."""
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 from pathlib import Path
 
 import yaml
+from homeassistant.const import EVENT_HOMEASSISTANT_START
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.template import Template
 from homeassistant.setup import async_setup_component
@@ -189,3 +191,30 @@ async def test_clock_schedule(hass: HomeAssistant, remote, freezer) -> None:
     assert remote.clock["enabled"] is True, remote.display_log
     await hours(now, now)  # the same time twice: all day
     assert remote.clock["enabled"] is True
+
+    # Turned off by hand, it stays off: Home Assistant starting again, or the
+    # bar coming back after being out of reach, does not apply the schedule.
+    await hass.services.async_call("switch", "turn_off", {"entity_id": "switch.jbl_display_clock"}, blocking=True)
+    await hass.async_block_till_done()
+    assert remote.clock["enabled"] is False
+    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    hass.states.async_set("switch.jbl_display_clock", "unavailable")
+    await hass.async_block_till_done()
+    hass.states.async_set("switch.jbl_display_clock", "off")
+    await hass.async_block_till_done()
+    assert remote.clock["enabled"] is False, remote.display_log
+
+    # The schedule changed while the bar is out of reach: applied once it is back.
+    # (The automation then waits: not async_block_till_done, which would wait for it.)
+    async def settle() -> None:
+        for _ in range(50):
+            await asyncio.sleep(0)
+
+    hass.states.async_set("switch.jbl_display_clock", "unavailable")
+    await hass.services.async_call("input_boolean", "turn_off", {"entity_id": "input_boolean.jbl_clock_scheduled"}, blocking=True)
+    await hass.services.async_call("input_boolean", "turn_on", {"entity_id": "input_boolean.jbl_clock_scheduled"}, blocking=True)
+    await settle()
+    assert remote.clock["enabled"] is False
+    hass.states.async_set("switch.jbl_display_clock", "off")
+    await settle()
+    assert remote.clock["enabled"] is True, remote.display_log
