@@ -29,6 +29,9 @@ display_message:
     clear_on_key:
       selector:
         boolean:
+    when_on:
+      selector:
+        boolean:
 display_cancel:
   target:
     entity:

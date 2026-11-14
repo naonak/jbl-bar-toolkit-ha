@@ -23,7 +23,7 @@ from homeassistant.helpers.storage import Store
 from .coordinator import JblBarCoordinator
 from .entity import JblBarEntity
 from .lines import TEXT, texts, unregistered
-from .messages import message_list
+from .messages import message_list, message_options
 from .timers import TIMER, timer_list
 
 RECENT = 4  # shown
@@ -94,6 +94,8 @@ class RecentTracker:
             if not m.get("text"):
                 continue
             entry = {"text": m["text"], "id": m["id"] if m.get("named") else "", "stop_on_key": bool(m.get("stop_on_key"))}
+            if m.get("when_on"):
+                entry["when_on"] = True
             running_messages.add((entry["text"], entry["id"]))
             if first or key in seen:
                 continue
@@ -205,7 +207,8 @@ class JblBarRecentMessage(JblBarRecent):
             how = _length(item["duration_s"])
         else:
             how = words["times"].format(n=item.get("repeat", 1))
-        return f"{item['text']}{' (' + item['id'] + ')' if item['id'] else ''} · {how}"
+        when = f" · {words['when_on']}" if item.get("when_on") else ""
+        return f"{item['text']}{' (' + item['id'] + ')' if item['id'] else ''} · {how}{when}"
 
     async def async_press(self) -> None:
         if not (item := self._item()):
@@ -218,4 +221,6 @@ class JblBarRecentMessage(JblBarRecent):
                 parameters[key] = item[key]
         if item.get("stop_on_key"):
             parameters["stop_on_key"] = True
+        if item.get("when_on") and "when_on" in message_options(self.state_doc):
+            parameters["when_on"] = True
         await self.display_action("show", parameters)

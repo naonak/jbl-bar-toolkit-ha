@@ -60,6 +60,7 @@ class FakeRemote:
         self.reboot = True  # False: remote without the restart
         self.reboots: list[dict | None] = []
         self.messages: list[dict] | None = None  # a list: a remote that lists the messages in course
+        self.message_options: list[str] | None = None  # what show takes beyond the length (a newer remote)
         self.clock: dict | None = None  # a dict: a remote with the standby clock (enabled, tz)
         self.streams = 0
         self.changed = asyncio.Condition()
@@ -95,7 +96,9 @@ class FakeRemote:
                 **({"bar91.bass-offset": {"offset_db": self.bass_offset, "status": "active" if self.bass_offset else "off"}}
                    if self.bass_offset is not None else {}),
                 **({"bar91.timer": {"timers": [dict(t) for t in self.timers]}} if self.timers is not None else {}),
-                **({"bar91.display-message": {"messages": [dict(m) for m in self.messages]}} if self.messages is not None else {}),
+                **({"bar91.display-message": {"messages": [dict(m) for m in self.messages],
+                                              **({"options": list(self.message_options)} if self.message_options is not None else {})}}
+                   if self.messages is not None else {}),
                 **({"bar91.display-clock": dict(self.clock)} if self.clock is not None else {}),
             }} if self.bass_offset is not None or self.timers is not None or self.messages is not None or self.clock is not None else {}),
             **({"automation": {"enabled": True, "engine": "go", "status": "IDLE", "remembered_mode": self.remembered_mode}}
@@ -201,6 +204,8 @@ class FakeRemote:
                 return web.json_response({"error": "unknown control", "state": self.state()}, status=409)
             if a.endswith(".show") and not (params or {}).get("text"):
                 return web.json_response({"error": "provide a text", "state": self.state()}, status=409)
+            if a.endswith(".show") and "when_on" in params and "when_on" not in (self.message_options or []):
+                return web.json_response({"error": "invalid extension parameters", "state": self.state()}, status=409)
             self.display_log.append((a.rsplit(".", 1)[1], params))
             return web.json_response(self.state())
         if a == "av_sync_set":

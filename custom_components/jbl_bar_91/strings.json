@@ -259,6 +259,9 @@
     "display_one_length": {
       "message": "Choose only one of repeat, duration or until cancelled."
     },
+    "display_when_on_unsupported": {
+      "message": "This toolkit remote cannot wait for the bar to be on: update it."
+    },
     "display_duration": {
       "message": "The duration goes from 1 second to 24 hours."
     },
@@ -321,6 +324,10 @@
         "clear_on_key": {
           "name": "Clear with a key",
           "description": "Any key on the JBL remote clears the message, as a sign it was seen (toolkit remotes with the Messages panel)."
+        },
+        "when_on": {
+          "name": "When the bar is on",
+          "description": "Keep the message while the bar is in standby and show it when someone turns the bar on (at once if it is on), so that someone using the bar sees it. Its duration counts from then. Toolkit remotes that offer it."
         }
       }
     },

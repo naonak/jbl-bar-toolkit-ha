@@ -124,6 +124,14 @@ async def test_messages_card_and_scripts(hass: HomeAssistant, remote) -> None:
         assert hass.states.get("input_text.jbl_message_text").state == ""
     await hass.services.async_call("script", "jbl_message_clear_all", {}, blocking=True)
     assert remote.display_log[-1] == ("cancel", None)
+    # Wait until the bar is on: sent with the message (a remote that offers it).
+    remote.message_options = ["stop_on_key", "when_on"]
+    await refresh(hass)
+    await hass.services.async_call("input_boolean", "turn_on", {"entity_id": "input_boolean.jbl_message_when_on"}, blocking=True)
+    await hass.services.async_call("input_text", "set_value", {"entity_id": "input_text.jbl_message_text", "value": "Call grandma"}, blocking=True)
+    await hass.services.async_call("script", "jbl_message_send", {}, blocking=True)
+    assert remote.display_log[-1] == ("show", {"text": "Call grandma", "duration_s": 3600, "stop_on_key": True, "when_on": True})
+    await hass.services.async_call("input_boolean", "turn_off", {"entity_id": "input_boolean.jbl_message_when_on"}, blocking=True)
     remote.messages = [
         {"id": "default", "named": False, "text": "CALL GRANDMA", "mode": "forever", "showing": True},
         {"id": "plants", "named": True, "text": "WATER THE PLANTS", "mode": "passes", "passes_left": 3, "showing": False},

@@ -30,10 +30,12 @@ LINES = 8  # the remote runs at most 8 timers; messages beyond 8 stay on the sum
 TEXT = {
     "en": {"timer": "Timer", "ringing": "ringing", "ends": "ends at", "until": "until", "forever": "until cleared",
            "timer_line": "Timer line", "message_line": "Message line",
-           "recent_timer": "Recent timer", "recent_message": "Recent message", "times": "{n} times"},
+           "recent_timer": "Recent timer", "recent_message": "Recent message", "times": "{n} times",
+           "when_on": "when the bar is on"},
     "fr": {"timer": "Minuteur", "ringing": "sonne", "ends": "fin à", "until": "jusqu'à", "forever": "jusqu'à effacement",
            "timer_line": "Ligne de minuteur", "message_line": "Ligne de message",
-           "recent_timer": "Minuteur récent", "recent_message": "Message récent", "times": "{n} fois"},
+           "recent_timer": "Minuteur récent", "recent_message": "Message récent", "times": "{n} fois",
+           "when_on": "à l'allumage"},
 }
 
 
@@ -70,6 +72,8 @@ def timer_label(t: dict[str, Any], words: dict[str, str]) -> str:
 
 def message_label(m: dict[str, Any], words: dict[str, str]) -> str:
     label = m["text"] + (f" ({m['name']})" if m["name"] else "")
+    if m.get("held"):
+        return f"{label} – {words['when_on']}"  # waits for the bar to be on
     if m["mode"] == "forever":
         return f"{label} – {words['forever']}"
     if m["mode"] == "duration" and m["ends_at"]:
@@ -172,6 +176,8 @@ class JblBarMessageLine(JblBarLine):
     @property
     def icon(self) -> str:
         item = self._item()
+        if item and item.get("held"):
+            return "mdi:power-sleep"  # waits for the bar to be on
         return "mdi:message-text" if item and item["showing"] else "mdi:message-text-clock-outline"
 
     async def async_press(self) -> None:

@@ -134,6 +134,7 @@ cards:
       - input_text.jbl_message_text
       - input_select.jbl_message_length
       - input_boolean.jbl_message_clear_on_key
+      - input_boolean.jbl_message_when_on
       - type: button
         name: Show on the bar
         icon: mdi:message-arrow-right-outline

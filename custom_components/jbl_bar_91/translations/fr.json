@@ -259,6 +259,9 @@
     "display_one_length": {
       "message": "Choisissez un seul réglage parmi répétitions, durée et jusqu'à annulation."
     },
+    "display_when_on_unsupported": {
+      "message": "Cette télécommande de la toolkit ne sait pas attendre que la barre soit allumée : mettez-la à jour."
+    },
     "display_duration": {
       "message": "La durée va de 1 seconde à 24 heures."
     },
@@ -321,6 +324,10 @@
         "clear_on_key": {
           "name": "Effacer avec une touche",
           "description": "N'importe quelle touche de la télécommande JBL efface le message, signe qu'il a été vu (télécommandes de la toolkit avec le panneau Messages)."
+        },
+        "when_on": {
+          "name": "Quand la barre est allumée",
+          "description": "Garder le message tant que la barre est en veille et l'afficher quand quelqu'un l'allume (tout de suite si elle est allumée), pour qu'une personne qui utilise la barre le voie. Sa durée compte à partir de là. Télécommandes de la toolkit qui le proposent."
         }
       }
     },

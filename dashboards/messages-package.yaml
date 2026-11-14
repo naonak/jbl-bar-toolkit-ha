@@ -25,6 +25,9 @@ input_boolean:
   jbl_message_clear_on_key:
     name: Clear with a key on the JBL remote
     initial: true
+  jbl_message_when_on:
+    name: Wait until the bar is on
+    icon: mdi:power-sleep
 input_datetime:
   jbl_clock_from:
     name: Clock from
@@ -44,6 +47,8 @@ script:
       text: "{{ states('input_text.jbl_message_text') | trim }}"
       length: "{{ states('input_select.jbl_message_length') }}"
       key: "{{ is_state('input_boolean.jbl_message_clear_on_key', 'on') }}"
+      # Kept while the bar is in standby, shown when someone turns it on (toolkit remote that offers it).
+      wait_on: "{{ is_state('input_boolean.jbl_message_when_on', 'on') }}"
     sequence:
       - condition: template
         value_template: "{{ text != '' }}"
@@ -57,6 +62,7 @@ script:
                   message: "{{ text }}"
                   repeat: "{{ 1 if length == 'Once' else 3 }}"
                   clear_on_key: "{{ key }}"
+                  when_on: "{{ wait_on }}"
           - conditions: "{{ length in ['5 min', '15 min', '1 hour'] }}"
             sequence:
               - action: jbl_bar_91.display_message
@@ -67,6 +73,7 @@ script:
                   duration:
                     minutes: "{{ {'5 min': 5, '15 min': 15, '1 hour': 60}[length] }}"
                   clear_on_key: "{{ key }}"
+                  when_on: "{{ wait_on }}"
         default:
           - action: jbl_bar_91.display_message
             target:
@@ -75,6 +82,7 @@ script:
               message: "{{ text }}"
               forever: true
               clear_on_key: "{{ key }}"
+              when_on: "{{ wait_on }}"
       - action: input_text.set_value
         target:
           entity_id: input_text.jbl_message_text

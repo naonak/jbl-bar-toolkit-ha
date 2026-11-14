@@ -21,6 +21,7 @@ from .const import DOMAIN, SOURCES, VOLUME_MAX
 from .timers import TIMER, TIMER_RING_DEFAULT, TIMER_SOUNDS, TIMER_VOLUME_DEFAULT, fold_name, timer_list
 from .coordinator import JblBarConfigEntry
 from .entity import JblBarEntity
+from .messages import message_options
 
 PLAYBACK = {
     F.PLAY: "media_play",
@@ -44,6 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
             vol.Optional("duration"): cv.positive_time_period,
             vol.Optional("forever"): cv.boolean,
             vol.Optional("clear_on_key"): cv.boolean,
+            vol.Optional("when_on"): cv.boolean,
         },
         "async_display_message",
     )
@@ -208,8 +210,9 @@ class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
         duration: timedelta | None = None,
         forever: bool | None = None,
         clear_on_key: bool | None = None,
+        when_on: bool | None = None,
     ) -> None:
-        """Show a message on the bar's front display (on or in standby)."""
+        """Show a message on the bar's front display (on or in standby, or once the bar is on)."""
         if sum(x is not None and x is not False for x in (repeat, duration, forever)) > 1:
             raise ServiceValidationError(translation_domain=DOMAIN, translation_key="display_one_length")
         parameters: dict[str, Any] = {"text": message}
@@ -226,6 +229,10 @@ class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
             parameters["forever"] = True
         if clear_on_key:
             parameters["stop_on_key"] = True  # any key on the JBL remote clears it
+        if when_on:
+            if "when_on" not in message_options(self.state_doc):
+                raise ServiceValidationError(translation_domain=DOMAIN, translation_key="display_when_on_unsupported")
+            parameters["when_on"] = True  # held while the bar is in standby
         await self.display_action("show", parameters)
 
     async def async_display_cancel(self, id: str | None = None) -> None:

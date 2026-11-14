@@ -533,6 +533,41 @@ async def test_display_message_validation(hass: HomeAssistant, remote) -> None:
     assert remote.display_log == [("show", {"text": "A", "repeat": 2})]
 
 
+async def test_display_message_when_the_bar_is_on(hass: HomeAssistant, remote) -> None:
+    """when_on: sent to a remote that offers it; refused, in words, by one that does not."""
+    remote.messages = []
+    await setup(hass, remote)
+    with pytest.raises(ServiceValidationError) as err:
+        await call(hass, DOMAIN, "display_message", MP, message="Rappelle mamie", when_on=True)
+    assert err.value.translation_key == "display_when_on_unsupported" and remote.display_log == []
+    await call(hass, DOMAIN, "display_message", MP, message="Rappelle mamie", when_on=False)  # off: as before
+    remote.message_options = ["stop_on_key", "when_on"]
+    coordinator = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    await coordinator.async_refresh()
+    await call(hass, DOMAIN, "display_message", MP, message="Rappelle mamie", forever=True, clear_on_key=True, when_on=True)
+    assert remote.display_log == [("show", {"text": "Rappelle mamie"}),
+                                  ("show", {"text": "Rappelle mamie", "forever": True, "stop_on_key": True, "when_on": True})]
+
+    # Held while the bar is in standby: its line says so, its time has not started.
+    hass.config.language = "fr"
+    remote.messages = [{"id": "default", "named": False, "text": "RAPPELLE MAMIE", "mode": "duration", "remaining_ms": 900000,
+                        "showing": False, "stop_on_key": True, "when_on": True, "held": True}]
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    line = hass.states.get("button.jbl_message_line_1")
+    assert line.name == "RAPPELLE MAMIE – à l'allumage" and line.attributes["icon"] == "mdi:power-sleep", line
+    described = hass.states.get(next(e for e in hass.states.async_entity_ids("sensor") if e.endswith("_messages"))).attributes["messages"][0]
+    assert described["held"] and described["when_on"] and described["ends_at"] is None and described["duration_s"] == 900, described
+
+    # Once over, among the recent ones with the option, and sent again with it.
+    remote.messages = []
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert hass.states.get("button.jbl_recent_message_1").name == "RAPPELLE MAMIE · 15 min · à l'allumage"
+    await call(hass, "button", "press", "button.jbl_recent_message_1")
+    assert remote.display_log[-1] == ("show", {"text": "RAPPELLE MAMIE", "duration_s": 900, "stop_on_key": True, "when_on": True})
+
+
 async def test_display_message_needs_a_recent_remote(hass: HomeAssistant, remote) -> None:
     remote.display = False
     await setup(hass, remote)
