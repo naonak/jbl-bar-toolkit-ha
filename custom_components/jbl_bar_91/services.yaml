@@ -116,3 +116,8 @@ timer_extend:
       example: "t3"
       selector:
         text:
+forget_recent:
+  target:
+    entity:
+      integration: jbl_bar_91
+      domain: button

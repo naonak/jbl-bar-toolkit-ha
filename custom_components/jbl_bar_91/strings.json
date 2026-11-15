@@ -294,6 +294,9 @@
     },
     "restart_unsupported": {
       "message": "The browser remote on the soundbar cannot restart it yet. Update the JBL Bar Toolkit on the bar."
+    },
+    "not_a_recent": {
+      "message": "{entity} is not a recent timer or message: pick button.jbl_recent_timer_N or button.jbl_recent_message_N."
     }
   },
   "services": {
@@ -406,6 +409,10 @@
           "description": "The id from the Timers sensor, e.g. t3."
         }
       }
+    },
+    "forget_recent": {
+      "name": "Forget a recent one",
+      "description": "Take a recent timer or message off the list (button.jbl_recent_timer_N or button.jbl_recent_message_N). It comes back if it runs again."
     }
   }
 }

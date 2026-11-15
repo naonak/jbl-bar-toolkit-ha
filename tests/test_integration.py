@@ -915,6 +915,22 @@ async def test_recent_timers_and_messages(hass: HomeAssistant, remote, hass_stor
     await call(hass, "button", "press", "button.jbl_recent_message_1")
     assert remote.display_log[-1] == ("show", {"text": "COLIS", "duration_s": 1800})
 
+    # Forgotten: off the list, the next ones move up; it comes back if it runs again.
+    remote.timers = []
+    await refresh()
+    before = names("timer")
+    assert before == ["PIZZA · 12 min", "Timer · 5 min"], before
+    await call(hass, DOMAIN, "forget_recent", "button.jbl_recent_timer_1")
+    assert names("timer") == before[1:]
+    with pytest.raises(ServiceValidationError) as err:
+        await call(hass, DOMAIN, "forget_recent", next(e for e in hass.states.async_entity_ids("button") if e.endswith("_restart")))
+    assert err.value.translation_key == "not_a_recent"
+    remote.timers = [{"id": "t9", "text": "PIZZA", "remaining_ms": 720000, "duration_ms": 720000, "sound": "off", "ringing": False}]
+    await refresh()
+    remote.timers = []
+    await refresh()
+    assert names("timer") == before, names("timer")
+
     # Kept across a restart.
     await hass.async_block_till_done()
     stored = next(v for k, v in hass_storage.items() if k.startswith("jbl_bar_91.recent."))["data"]

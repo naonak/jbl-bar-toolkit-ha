@@ -5,6 +5,7 @@ from homeassistant.components.button import ButtonDeviceClass, ButtonEntity
 from homeassistant.const import EntityCategory, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
@@ -53,6 +54,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
     # Restart the soundbar: in the device's configuration, for when it stops responding.
     entities.append(JblBarRestart(coordinator, "restart"))
     add(entities)
+    # Take a recent timer or message off the list (a cross next to it on a dashboard).
+    entity_platform.async_get_current_platform().async_register_entity_service("forget_recent", None, "async_forget_recent")
 
 
 class JblBarRestart(JblBarEntity, ButtonEntity):

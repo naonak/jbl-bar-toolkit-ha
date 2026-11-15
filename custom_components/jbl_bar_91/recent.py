@@ -9,6 +9,7 @@ left out of the recent ones (it has its line) until it is over.
 
 Each is a button (button.jbl_recent_timer_N, button.jbl_recent_message_N)
 named after it; pressing it starts that timer or shows that message again.
+The jbl_bar_91.forget_recent service takes one off the list.
 An empty slot is unavailable, so a dashboard hides it. Names only change when
 the list does.
 """
@@ -118,6 +119,14 @@ class RecentTracker:
         return changed
 
 
+    def forget(self, kind: str, item: dict[str, Any]) -> None:
+        """Take one recent timer or message off the list (it comes back if it runs again)."""
+        if kind == "timer":
+            self.timers = [r for r in self.timers if (r["text"], r["minutes"]) != (item["text"], item["minutes"])]
+        else:
+            self.messages = [r for r in self.messages if (r["text"], r["id"]) != (item["text"], item["id"])]
+        self._save()
+
     def shown_timers(self) -> list[dict[str, Any]]:
         """The recent timers to offer: not one running now."""
         return [r for r in self.timers if (r["text"], r["minutes"]) not in self._running_timers][:RECENT]
@@ -167,6 +176,12 @@ class JblBarRecent(JblBarEntity, ButtonEntity):
 
     def label(self, item: dict[str, Any], words: dict[str, str]) -> str:
         raise NotImplementedError
+
+    async def async_forget_recent(self) -> None:
+        """Take this one off the recent ones; the others move up."""
+        if item := self._item():
+            tracker(self.coordinator).forget(self.kind, item)
+            self.coordinator.async_update_listeners()
 
 
 class JblBarRecentTimer(JblBarRecent):

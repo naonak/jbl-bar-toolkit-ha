@@ -294,6 +294,9 @@
     },
     "restart_unsupported": {
       "message": "La télécommande installée sur la barre ne sait pas encore la redémarrer. Mettez à jour JBL Bar Toolkit sur la barre."
+    },
+    "not_a_recent": {
+      "message": "{entity} n'est pas un minuteur ou un message récent : choisissez button.jbl_recent_timer_N ou button.jbl_recent_message_N."
     }
   },
   "services": {
@@ -406,6 +409,10 @@
           "description": "L'identifiant donné par le capteur Minuteurs, par exemple t3."
         }
       }
+    },
+    "forget_recent": {
+      "name": "Oublier un récent",
+      "description": "Retirer un minuteur ou un message de la liste des récents (button.jbl_recent_timer_N ou button.jbl_recent_message_N). Il revient s'il est relancé."
     }
   }
 }

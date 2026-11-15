@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -90,6 +90,10 @@ class JblBarEntity(CoordinatorEntity[JblBarCoordinator]):
     @property
     def state_doc(self) -> dict[str, Any]:
         return self.coordinator.data or {}
+
+    async def async_forget_recent(self) -> None:
+        """jbl_bar_91.forget_recent: only the recent timer and message buttons (recent.py) take it."""
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="not_a_recent", translation_placeholders={"entity": self.entity_id})
 
     async def display_action(self, action: str, parameters: dict[str, Any] | None) -> None:
         """Send a front-display message action (remote extension bar91.display-message)."""
