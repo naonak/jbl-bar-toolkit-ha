@@ -864,6 +864,42 @@ async def test_standby_clock_switch(hass: HomeAssistant, remote) -> None:
     assert remote.display_log[-1] == ("clock", {"when": "always"}) and remote.clock["when"] == "always"
 
 
+async def test_keep_in_recent_off(hass: HomeAssistant, remote) -> None:
+    """Started with keep_in_recent: false (an automation's "fridge open"), never among the recent ones."""
+    remote.timers, remote.messages = [], []
+    await setup(hass, remote)
+    coordinator = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+
+    def names(kind: str) -> list[str]:
+        return [s.name for n in range(1, 5) if (s := hass.states.get(f"button.jbl_recent_{kind}_{n}")).state != "unavailable"]
+
+    async def refresh() -> None:
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+    await call(hass, DOMAIN, "timer_start", MP, duration={"minutes": 3}, name="Oeufs", keep_in_recent=False)
+    await call(hass, DOMAIN, "timer_start", MP, duration={"minutes": 3}, name="Pates")
+    await call(hass, DOMAIN, "timer_start", MP, duration={"seconds": 90}, keep_in_recent=False)  # unnamed, 2 min
+    await call(hass, DOMAIN, "display_message", MP, message="Frigo ouvert", id="fridge", forever=True, keep_in_recent=False)
+    await call(hass, DOMAIN, "display_message", MP, message="Colis", repeat=2)
+    await call(hass, DOMAIN, "display_message", MP, message="Porte", keep_in_recent=False)  # unnamed
+    assert all("keep_in_recent" not in p for _, p in remote.display_log + remote.timer_log)  # not sent to the bar
+    remote.messages = [{"id": "fridge", "named": True, "text": "FRIGO OUVERT", "mode": "forever", "showing": True},
+                       {"id": "default", "named": False, "text": "PORTE", "mode": "passes", "passes_left": 1, "showing": False},
+                       {"id": "colis", "named": True, "text": "COLIS", "mode": "passes", "passes_left": 2, "showing": False}]
+    await refresh()
+    remote.timers, remote.messages = [], []
+    await refresh()
+    assert names("timer") == ["PATES · 3 min"] and names("message") == ["COLIS (colis) · 2 times"], (names("timer"), names("message"))
+
+    # Only that once: the same again, sent normally, is remembered.
+    remote.messages = [{"id": "fridge", "named": True, "text": "FRIGO OUVERT", "mode": "forever", "showing": True}]
+    await refresh()
+    remote.messages = []
+    await refresh()
+    assert names("message") == ["FRIGO OUVERT (fridge) · until cleared", "COLIS (colis) · 2 times"]
+
+
 async def test_recent_timers_and_messages(hass: HomeAssistant, remote, hass_storage) -> None:
     """What showed on the bar, from anywhere, can be started again once over; kept across a restart."""
     remote.timers, remote.messages = [], []

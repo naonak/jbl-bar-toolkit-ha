@@ -331,6 +331,10 @@
         "when_on": {
           "name": "When the bar is on",
           "description": "Keep the message while the bar is in standby and show it when someone turns the bar on (at once if it is on), so that someone using the bar sees it. Its duration counts from then. Toolkit remotes that offer it."
+        },
+        "keep_in_recent": {
+          "name": "Keep among the recent ones",
+          "description": "Off: this one is not added to the recent ones (for an automation's message or timer you would never start again by hand, like \"fridge open\"). On by default."
         }
       }
     },
@@ -371,6 +375,10 @@
         "ring_for": {
           "name": "Ring for",
           "description": "How long the chime repeats (3 s to 5 min, default 30 s). A key on the JBL remote stops it."
+        },
+        "keep_in_recent": {
+          "name": "Keep among the recent ones",
+          "description": "Off: this one is not added to the recent ones (for an automation's message or timer you would never start again by hand, like \"fridge open\"). On by default."
         }
       }
     },

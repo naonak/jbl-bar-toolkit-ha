@@ -46,6 +46,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
             vol.Optional("forever"): cv.boolean,
             vol.Optional("clear_on_key"): cv.boolean,
             vol.Optional("when_on"): cv.boolean,
+            vol.Optional("keep_in_recent"): cv.boolean,
         },
         "async_display_message",
     )
@@ -64,6 +65,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
             vol.Optional("sound"): vol.In(TIMER_SOUNDS),
             vol.Optional("sound_volume"): vol.All(vol.Coerce(int), vol.Range(min=1, max=30)),
             vol.Optional("ring_for"): cv.positive_time_period,
+            vol.Optional("keep_in_recent"): cv.boolean,
         },
         "async_timer_start",
     )
@@ -211,6 +213,7 @@ class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
         forever: bool | None = None,
         clear_on_key: bool | None = None,
         when_on: bool | None = None,
+        keep_in_recent: bool | None = None,
     ) -> None:
         """Show a message on the bar's front display (on or in standby, or once the bar is on)."""
         if sum(x is not None and x is not False for x in (repeat, duration, forever)) > 1:
@@ -233,6 +236,8 @@ class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
             if "when_on" not in message_options(self.state_doc):
                 raise ServiceValidationError(translation_domain=DOMAIN, translation_key="display_when_on_unsupported")
             parameters["when_on"] = True  # held while the bar is in standby
+        if keep_in_recent is False:
+            self.coordinator.recent.skip_next("message", id or "default")
         await self.display_action("show", parameters)
 
     async def async_display_cancel(self, id: str | None = None) -> None:
@@ -247,6 +252,7 @@ class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
         sound: str | None = None,
         sound_volume: int | None = None,
         ring_for: timedelta | None = None,
+        keep_in_recent: bool | None = None,
     ) -> None:
         """Start a timer on the bar's front display."""
         seconds = int(duration.total_seconds())
@@ -265,6 +271,9 @@ class JblBarMediaPlayer(JblBarEntity, MediaPlayerEntity):
             if not 3 <= ring <= 300:
                 raise ServiceValidationError(translation_domain=DOMAIN, translation_key="timer_ring")
             parameters["ring_s"] = ring
+        if keep_in_recent is False:
+            # Its key among the recent ones: the name as the bar keeps it, whole minutes.
+            self.coordinator.recent.skip_next("timer", (fold_name(parameters.get("text") or ""), max(1, round(seconds / 60))))
         await self.extension_action(TIMER, "start", parameters, "timer_unsupported")
 
     async def async_timer_cancel(self, name: str | None = None, id: str | None = None, all: bool | None = None) -> None:

@@ -9,12 +9,14 @@ left out of the recent ones (it has its line) until it is over.
 
 Each is a button (button.jbl_recent_timer_N, button.jbl_recent_message_N)
 named after it; pressing it starts that timer or shows that message again.
-The jbl_bar_91.forget_recent service takes one off the list.
+The jbl_bar_91.forget_recent service takes one off the list; started with
+keep_in_recent: false (display_message, timer_start), one never gets on it.
 An empty slot is unavailable, so a dashboard hides it. Names only change when
 the list does.
 """
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from homeassistant.components.button import ButtonEntity
@@ -30,6 +32,7 @@ from .timers import TIMER, timer_list
 RECENT = 4  # shown
 KEEP = 2 * RECENT  # stored: room for the ones running, which are not shown
 STORE_VERSION = 1
+SKIP_WINDOW_S = 60  # keep_in_recent: false waits this long for its timer or message to show up
 
 
 class RecentTracker:
@@ -45,11 +48,29 @@ class RecentTracker:
         self._timer_keys: dict[str, tuple[str, int]] = {}
         self._running_timers: set[tuple[str, int]] = set()
         self._running_messages: set[tuple[str, str]] = set()
+        # Started with keep_in_recent: false, not seen yet: (kind, key, deadline).
+        self._skips: list[tuple[str, Any, float]] = []
 
     async def async_load(self) -> None:
         data = await self._store.async_load() or {}
         self.timers = [t for t in data.get("timers", []) if isinstance(t, dict) and isinstance(t.get("minutes"), int)][:KEEP]
         self.messages = [m for m in data.get("messages", []) if isinstance(m, dict) and isinstance(m.get("text"), str)][:KEEP]
+
+    def skip_next(self, kind: str, key: Any) -> None:
+        """The next new timer (key: its folded name and minutes) or message (key:
+        its id) is not to be remembered: an automation's "fridge open" is never
+        started again by hand. Call it before the action, whose answer may
+        already show the new one."""
+        self._skips.append((kind, key, time.monotonic() + SKIP_WINDOW_S))
+
+    def _skipped(self, kind: str, key: Any) -> bool:
+        now = time.monotonic()
+        self._skips = [s for s in self._skips if s[2] > now]
+        for skip in self._skips:
+            if skip[:2] == (kind, key):
+                self._skips.remove(skip)
+                return True
+        return False
 
     def _save(self) -> None:
         # Rare (a new timer or message): written at once.
@@ -80,7 +101,7 @@ class RecentTracker:
             # Its recent key, from its length when first seen (+1 min later does not change it).
             recent_key = self._timer_keys.get(t["id"]) or (t.get("text") or "", max(1, round(t["duration_ms"] / 60000)))
             timer_keys[t["id"]] = recent_key
-            if first or key in seen:
+            if first or key in seen or self._skipped("timer", recent_key):
                 continue
             entry = {"text": recent_key[0], "minutes": recent_key[1],
                      "sound": t.get("sound") or "off", "countdown": bool(t.get("countdown"))}
@@ -98,7 +119,7 @@ class RecentTracker:
             if m.get("when_on"):
                 entry["when_on"] = True
             running_messages.add((entry["text"], entry["id"]))
-            if first or key in seen:
+            if first or key in seen or self._skipped("message", m["id"]):
                 continue
             if m.get("mode") == "forever":
                 entry["forever"] = True

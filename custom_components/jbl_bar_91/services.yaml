@@ -32,6 +32,9 @@ display_message:
     when_on:
       selector:
         boolean:
+    keep_in_recent:
+      selector:
+        boolean:
 display_cancel:
   target:
     entity:
@@ -78,6 +81,9 @@ timer_start:
     ring_for:
       selector:
         duration:
+    keep_in_recent:
+      selector:
+        boolean:
 timer_cancel:
   target:
     entity:

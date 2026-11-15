@@ -331,6 +331,10 @@
         "when_on": {
           "name": "Quand la barre est allumée",
           "description": "Garder le message tant que la barre est en veille et l'afficher quand quelqu'un l'allume (tout de suite si elle est allumée), pour qu'une personne qui utilise la barre le voie. Sa durée compte à partir de là. Télécommandes de la toolkit qui le proposent."
+        },
+        "keep_in_recent": {
+          "name": "Garder dans les récents",
+          "description": "Désactivé : il n'est pas ajouté aux récents (pour le message ou le minuteur d'une automatisation qu'on ne relancera jamais à la main, comme « frigo ouvert »). Activé par défaut."
         }
       }
     },
@@ -371,6 +375,10 @@
         "ring_for": {
           "name": "Durée de la sonnerie",
           "description": "Combien de temps la sonnerie se répète (3 s à 5 min, 30 s par défaut). Une touche de la télécommande JBL l'arrête."
+        },
+        "keep_in_recent": {
+          "name": "Garder dans les récents",
+          "description": "Désactivé : il n'est pas ajouté aux récents (pour le message ou le minuteur d'une automatisation qu'on ne relancera jamais à la main, comme « frigo ouvert »). Activé par défaut."
         }
       }
     },
