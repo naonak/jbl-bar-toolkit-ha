@@ -617,8 +617,14 @@ async def test_timer_services(hass: HomeAssistant, remote) -> None:
     assert remote.timer_log[-1] == ("cancel", {"id": "t1"})
     await call(hass, DOMAIN, "timer_cancel", MP, id="t2")
     assert remote.timer_log[-1] == ("cancel", {"id": "t2"})
+    # Found the way the bar writes it: accents folded, a phone keyboard's apostrophe as '.
+    await call(hass, DOMAIN, "timer_start", MP, duration={"minutes": 3}, name="L’eau")
+    await call(hass, DOMAIN, "timer_extend", MP, name="L’eau")  # as an automation types it again
+    assert remote.timer_log[-1] == ("extend", {"id": "t6", "add_s": 60})
+    await call(hass, DOMAIN, "timer_cancel", MP, name="pâtes")
+    assert remote.timer_log[-1] == ("cancel", {"id": "t3"})
     await call(hass, DOMAIN, "timer_cancel", MP, all=True)
-    assert remote.timer_log[-1] == ("cancel", {"id": "t3"}) and remote.timers == []
+    assert remote.timer_log[-1] == ("cancel", {"id": "t6"}) and remote.timers == []
 
 
 async def test_timer_service_errors(hass: HomeAssistant, remote) -> None:
@@ -679,6 +685,8 @@ def test_timer_clock_keeps_end_times_still() -> None:
     doc["extensions"]["bar91.timer"]["timers"][0]["remaining_ms"] = 58800  # 1.2 s later, 1.2 s less
     assert clock.ends(doc, now + timedelta(milliseconds=1500))["t1"] == first
     assert fold_name("  pâtes  à l'œuf ") == "PATES A L'OEUF"
+    # As the bar stores them (the remote's own table): a phone's apostrophe and dashes too.
+    assert fold_name("L’eau – thé") == "L'EAU - THE" and fold_name("Æther Øl Straße") == "AETHER OL STRASSE"
 
 
 async def test_timer_extend(hass: HomeAssistant, remote) -> None:

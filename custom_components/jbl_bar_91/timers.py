@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from typing import Any
-import unicodedata
 
 from homeassistant.util import dt as dt_util
 
@@ -29,11 +28,27 @@ def timer_list(doc: dict[str, Any] | None) -> list[dict[str, Any]]:
     return [t for t in timers if isinstance(t, dict) and isinstance(t.get("id"), str)] if isinstance(timers, list) else []
 
 
+# The remote's own table (displayFold in the toolkit's display_message.go),
+# applied after upper-casing: a name is matched the way the bar stores it.
+FOLD = {
+    "À": "A", "Â": "A", "Ä": "A", "Á": "A", "Ã": "A", "Å": "A", "Æ": "AE",
+    "Ç": "C", "É": "E", "È": "E", "Ê": "E", "Ë": "E",
+    "Î": "I", "Ï": "I", "Í": "I", "Ì": "I", "Ñ": "N",
+    "Ô": "O", "Ö": "O", "Ó": "O", "Ò": "O", "Õ": "O", "Ø": "O", "Œ": "OE",
+    "Û": "U", "Ü": "U", "Ú": "U", "Ù": "U", "Ÿ": "Y", "Ý": "Y", "ß": "SS",
+    "’": "'", "‘": "'", "–": "-", "—": "-",
+}
+
+
 def fold_name(name: str) -> str:
-    """As the remote writes names: upper case, no accents, single spaces."""
-    text = unicodedata.normalize("NFKD", name)
-    text = "".join(c for c in text if not unicodedata.combining(c)).replace("Œ", "OE").replace("œ", "oe")
-    return " ".join(text.upper().split())
+    """As the remote writes names: upper case, the same letters folded, single spaces.
+
+    Mirrors the remote exactly: a phone keyboard's apostrophe (’) or a dash
+    (–) became ' and - on the bar but stayed as typed here, so a timer named
+    L’eau was not found by name (cancel, extend) nor kept off the recent ones.
+    """
+    text = "".join(FOLD.get(c, c) for c in name.upper())
+    return " ".join(text.split())
 
 
 class TimerClock:

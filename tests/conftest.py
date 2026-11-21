@@ -28,6 +28,19 @@ def fast_push(monkeypatch):
     monkeypatch.setattr(coordinator_module, "RECONNECT_MAX", 0.1)
 
 
+
+# As the toolkit remote writes a name (displayText in display_message.go):
+# upper case, its own folding table, single spaces. Kept apart from the
+# integration's copy so that the tests compare the two.
+BAR_FOLD = str.maketrans({"À": "A", "Â": "A", "Ä": "A", "Á": "A", "Ã": "A", "Å": "A", "Æ": "AE", "Ç": "C", "É": "E", "È": "E",
+                          "Ê": "E", "Ë": "E", "Î": "I", "Ï": "I", "Í": "I", "Ì": "I", "Ñ": "N", "Ô": "O", "Ö": "O", "Ó": "O",
+                          "Ò": "O", "Õ": "O", "Ø": "O", "Œ": "OE", "Û": "U", "Ü": "U", "Ú": "U", "Ù": "U", "Ÿ": "Y", "Ý": "Y",
+                          "ß": "SS", "’": "'", "‘": "'", "–": "-", "—": "-"})
+
+
+def bar_text(raw: str) -> str:
+    return " ".join(raw.upper().translate(BAR_FOLD).split())
+
 class FakeRemote:
     def __init__(self) -> None:
         self.s: dict[str, Any] = {
@@ -170,7 +183,7 @@ class FakeRemote:
                 return web.json_response({"error": "unknown control", "state": self.state()}, status=409)
             self.timer_log.append((a.rsplit(".", 1)[1], params))
             if a.endswith(".start"):
-                name = (params.get("text") or "").upper()
+                name = bar_text(params.get("text") or "")
                 if any(t["text"] == name for t in self.timers):
                     return web.json_response({"error": f"a timer named {name} is already running", "state": self.state()}, status=409)
                 self.timers.append({"id": f"t{len(self.timer_log)}", "text": name, "countdown": bool(params.get("countdown")),
