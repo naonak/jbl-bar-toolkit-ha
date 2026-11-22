@@ -102,8 +102,8 @@ script:
 # from" to "Clock until", every day; the same time in both = all day. Over
 # midnight works (22:00 to 07:00). Turning the schedule off leaves the clock as
 # it is. It acts at those two times and when the schedule is changed, never
-# when Home Assistant starts: a clock turned off by hand stays off until the
-# next time. A bar out of reach at that time gets it once back.
+# when Home Assistant starts. A bar out of reach at that time gets it once
+# back. Turning the clock off by hand turns the schedule off (below).
 automation:
   - id: jbl_clock_schedule
     alias: "JBL clock on a schedule"
@@ -139,3 +139,26 @@ automation:
       - action: "switch.turn_{{ 'on' if inside else 'off' }}"
         target:
           entity_id: switch.jbl_display_clock
+
+  # The clock turned off by hand (dashboard, the bar's page, another
+  # automation) also turns the schedule off, so that it does not come back at
+  # the next time. Turn the schedule on again to resume it.
+  - id: jbl_clock_off_by_hand
+    alias: "JBL clock turned off by hand: schedule off"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: switch.jbl_display_clock
+        from: "on"
+        to: "off"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.jbl_clock_scheduled
+        state: "on"
+      # Not the schedule itself: an automation's own action has a parent context.
+      - condition: template
+        value_template: "{{ trigger.to_state.context.parent_id is none }}"
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.jbl_clock_scheduled

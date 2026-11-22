@@ -195,6 +195,7 @@ async def test_clock_schedule(hass: HomeAssistant, remote, freezer) -> None:
     assert remote.clock["enabled"] is True, remote.display_log
     await hours(now + timedelta(hours=1), now + timedelta(hours=2))  # now is outside
     assert remote.clock["enabled"] is False, remote.display_log
+    assert hass.states.is_state("input_boolean.jbl_clock_scheduled", "on")  # turned off by the schedule: it stays on
     await hours(now + timedelta(hours=2), now + timedelta(hours=1))  # over midnight, now inside
     assert remote.clock["enabled"] is True, remote.display_log
     await hours(now, now)  # the same time twice: all day
@@ -205,6 +206,13 @@ async def test_clock_schedule(hass: HomeAssistant, remote, freezer) -> None:
     await hass.services.async_call("switch", "turn_off", {"entity_id": "switch.jbl_display_clock"}, blocking=True)
     await hass.async_block_till_done()
     assert remote.clock["enabled"] is False
+    # ... and the schedule goes off with it, so that it does not come back at the next time.
+    assert hass.states.is_state("input_boolean.jbl_clock_scheduled", "off")
+    await hass.services.async_call("input_boolean", "turn_on", {"entity_id": "input_boolean.jbl_clock_scheduled"}, blocking=True)
+    await hass.async_block_till_done()
+    assert remote.clock["enabled"] is True  # turned on again: the schedule applies at once (all day)
+    await hass.services.async_call("switch", "turn_off", {"entity_id": "switch.jbl_display_clock"}, blocking=True)
+    await hass.async_block_till_done()
     hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
     hass.states.async_set("switch.jbl_display_clock", "unavailable")
     await hass.async_block_till_done()
@@ -226,3 +234,13 @@ async def test_clock_schedule(hass: HomeAssistant, remote, freezer) -> None:
     hass.states.async_set("switch.jbl_display_clock", "off")
     await settle()
     assert remote.clock["enabled"] is True, remote.display_log
+
+    # Turned off from the bar's own page: no service call, but the schedule goes off too.
+    # (Later than the schedule's own call: within 5 s, a state keeps that call's context.)
+    freezer.tick(timedelta(seconds=10))
+    await refresh(hass)
+    assert hass.states.is_state("switch.jbl_display_clock", "on") and hass.states.is_state("input_boolean.jbl_clock_scheduled", "on")
+    remote.clock["enabled"] = False
+    await refresh(hass)
+    await settle()
+    assert hass.states.is_state("input_boolean.jbl_clock_scheduled", "off")
