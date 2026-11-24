@@ -1,12 +1,13 @@
-"""Rear speaker docking and Bluetooth connection."""
+"""Rear speaker docking, Bluetooth and Ethernet connections."""
 from __future__ import annotations
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import JblBarConfigEntry
-from .entity import JblBarEntity
+from .entity import JblBarEntity, ethernet_port
 from .timers import timer_list, timers_installed
 
 
@@ -16,6 +17,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
          JblBarCommandRunning(coordinator, "command_running")])
     if timers_installed(coordinator.data):
         add([JblBarTimerRinging(coordinator, "timer_ringing")])
+    if ethernet_port(coordinator.data):
+        add([JblBarEthernet(coordinator, "ethernet")])
 
 
 class JblBarRearDocked(JblBarEntity, BinarySensorEntity):
@@ -32,6 +35,29 @@ class JblBarBluetooth(JblBarEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool | None:
         return (self.state_doc.get("bluetooth") or {}).get("connected", False)
+
+
+class JblBarEthernet(JblBarEntity, BinarySensorEntity):
+    """A cable in the ETHERNET port, with a link. The bar turns Wi-Fi off meanwhile."""
+
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:ethernet"
+
+    @property
+    def _port(self) -> dict:
+        return self.state_doc.get("ethernet") or {}
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._port.get("connected") if self._port.get("available") else None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        port = self._port
+        if not port.get("connected"):
+            return {}
+        return {key: port[key] for key in ("ip", "speed_mbps", "duplex") if port.get(key) is not None}
 
 
 class JblBarCommandRunning(JblBarEntity, BinarySensorEntity):

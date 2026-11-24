@@ -449,6 +449,85 @@ async def test_eq_saved_in_standby(hass: HomeAssistant, remote) -> None:
     assert hass.states.get(preset).attributes["status"] == "waiting"
 
 
+async def test_cancel_saved_eq(hass: HomeAssistant, remote) -> None:
+    """A curve saved while it cannot apply can be cancelled: the EQ kept before comes back."""
+    remote.keep_eq = True
+    remote.eq_kept = [-2, 0, 0, 0, 0]  # kept before standby
+    remote.s["power"] = "Standby"
+    await setup(hass, remote)
+    cancel, preset, status = "button.jbl_bar_9_1_cancel_saved_eq", "select.jbl_bar_9_1_front_eq_preset", "sensor.jbl_bar_9_1_front_eq_status"
+    assert hass.states.get(cancel).state == "unavailable"  # nothing saved for later yet
+    assert hass.states.get(status).attributes["pending"] is False
+    await call(hass, "select", "select_option", preset, option="warm")
+    await call(hass, "select", "select_option", preset, option="bright")
+    assert remote.eq_kept not in (None, [-2, 0, 0, 0, 0])  # two saves for later
+    assert await until(lambda: hass.states.get(cancel).state != "unavailable")
+    assert hass.states.get(status).attributes["pending"] is True
+    await call(hass, "button", "press", cancel)
+    assert remote.actions()[-1] == "eq_cancel"
+    assert remote.eq_kept == [-2, 0, 0, 0, 0]  # back to before the first save
+    assert await until(lambda: hass.states.get(cancel).state == "unavailable")
+    assert hass.states.get(status).attributes["pending"] is False
+    assert hass.states.get(status).attributes["gains_db"] == [-2, 0, 0, 0, 0]
+
+
+async def test_cancel_saved_eq_with_nothing_kept_before(hass: HomeAssistant, remote) -> None:
+    """With no EQ before, cancelling forgets the curve saved: the EQ is off."""
+    remote.keep_eq = True
+    remote.s["power"] = "Standby"
+    await setup(hass, remote)
+    await call(hass, "select", "select_option", "select.jbl_bar_9_1_front_eq_preset", option="warm")
+    await call(hass, "button", "press", "button.jbl_bar_9_1_cancel_saved_eq")
+    assert remote.eq_kept is None
+    assert await until(lambda: hass.states.get("select.jbl_bar_9_1_front_eq_preset").state == "original")
+
+
+async def test_cancel_saved_eq_never_available_on_older_remote(hass: HomeAssistant, remote) -> None:
+    """An older remote never reports a saved EQ as pending: the button stays unavailable."""
+    remote.keep_eq = True
+    remote.eq_cancel = False
+    remote.s["power"] = "Standby"
+    await setup(hass, remote)
+    await call(hass, "select", "select_option", "select.jbl_bar_9_1_front_eq_preset", option="warm")
+    assert remote.eq_kept == [0, 0, -1, -2, -3]
+    assert hass.states.get("select.jbl_bar_9_1_front_eq_preset").state == "warm"
+    assert hass.states.get("button.jbl_bar_9_1_cancel_saved_eq").state == "unavailable"
+
+
+async def test_no_cancel_saved_eq_without_helper(hass: HomeAssistant, remote) -> None:
+    remote.eq_helper = False
+    await setup(hass, remote)
+    assert hass.states.get("button.jbl_bar_9_1_cancel_saved_eq") is None
+
+
+async def test_ethernet(hass: HomeAssistant, remote) -> None:
+    """The ETHERNET port: connectivity with the address, speed and duplex, and the link speed."""
+    remote.ethernet = {"available": True, "connected": True, "ip": "10.0.0.35", "speed_mbps": 100, "duplex": "full"}
+    await setup(hass, remote)
+    port, speed = "binary_sensor.jbl_bar_9_1_ethernet", "sensor.jbl_bar_9_1_ethernet_link_speed"
+    state = hass.states.get(port)
+    assert state.state == "on" and state.attributes["device_class"] == "connectivity"
+    assert {k: state.attributes[k] for k in ("ip", "speed_mbps", "duplex")} == {"ip": "10.0.0.35", "speed_mbps": 100, "duplex": "full"}
+    assert hass.states.get(speed).state == "100" and hass.states.get(speed).attributes["unit_of_measurement"] == "Mbit/s"
+    remote.ethernet = {"available": True, "connected": False}  # cable unplugged
+    await remote.notify()
+    assert await until(lambda: hass.states.get(port).state == "off")
+    assert "ip" not in hass.states.get(port).attributes
+    assert hass.states.get(speed).state == "unknown"
+
+
+async def test_ethernet_appears_when_the_remote_reports_it(hass: HomeAssistant, remote) -> None:
+    """No Ethernet entities on an older remote; they appear once an updated remote reports the port."""
+    await setup(hass, remote)
+    assert hass.states.get("binary_sensor.jbl_bar_9_1_ethernet") is None
+    assert hass.states.get("sensor.jbl_bar_9_1_ethernet_link_speed") is None
+    remote.ethernet = {"available": True, "connected": False}
+    coordinator = hass.config_entries.async_entries("jbl_bar_91")[0].runtime_data
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert hass.states.get("binary_sensor.jbl_bar_9_1_ethernet").state == "off"
+
+
 async def test_eq_unavailable_in_standby_on_older_remote(hass: HomeAssistant, remote) -> None:
     """An older remote (no eq.kept) refuses an EQ it cannot apply: the entities stay unavailable."""
     remote.s["power"] = "Standby"

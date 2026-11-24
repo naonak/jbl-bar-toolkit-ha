@@ -10,7 +10,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import JblBarConfigEntry, JblBarCoordinator
-from .entity import JblBarEntity, advanced_controls, setup_controls
+from .entity import JblBarEntity, advanced_controls, eq_installed, eq_pending, setup_controls
 from .lines import LINES, JblBarMessageLine, JblBarTimerLine
 from .recent import RECENT, JblBarRecentMessage, JblBarRecentTimer
 from .messages import messages_installed
@@ -51,6 +51,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: 
     if messages_installed(coordinator.data):
         entities += [JblBarMessageLine(coordinator, n) for n in range(1, LINES + 1)]
         entities += [JblBarRecentMessage(coordinator, n) for n in range(1, RECENT + 1)]
+    # Cancel a Front EQ saved for later (standby, Smart Mode, another route):
+    # available only while one waits, on a remote that offers it.
+    if eq_installed(coordinator.data):
+        entities.append(JblBarCancelSavedEq(coordinator, "cancel_saved_eq"))
     # Restart the soundbar: in the device's configuration, for when it stops responding.
     entities.append(JblBarRestart(coordinator, "restart"))
     add(entities)
@@ -66,6 +70,23 @@ class JblBarRestart(JblBarEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         await self.extension_action("bar91.system", "reboot", {"confirm": True}, "restart_unsupported")
+
+
+class JblBarCancelSavedEq(JblBarEntity, ButtonEntity):
+    """Go back to the EQ setting from before a curve saved while it could not apply.
+
+    Like Cancel saved EQ on the web page: the EQ kept before (or none) comes
+    back, and an EQ the bar still plays stays.
+    """
+
+    _attr_icon = "mdi:equalizer-outline"
+
+    @property
+    def available(self) -> bool:
+        return super().available and eq_pending(self.state_doc)
+
+    async def async_press(self) -> None:
+        await self.coordinator.async_action("eq_cancel")
 
 
 class JblBarClearMessages(JblBarEntity, ButtonEntity):

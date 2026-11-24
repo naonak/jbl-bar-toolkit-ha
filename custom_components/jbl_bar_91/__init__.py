@@ -15,6 +15,7 @@ from .entity import (
     advanced_controls,
     bass_offset_state,
     eq_installed,
+    ethernet_port,
     setup_controls,
     smart_mode_memory,
 )
@@ -42,7 +43,7 @@ def features(doc: dict[str, Any] | None) -> frozenset[str]:
         "advanced": advanced_controls(doc), "bass_offset": bass_offset_state(doc) is not None,
         "eq": eq_installed(doc), "setup": setup_controls(doc), "memory": smart_mode_memory(doc),
         "timers": timers_installed(doc), "messages": messages_installed(doc),
-        "display_clock": clock_state(doc) is not None,
+        "display_clock": clock_state(doc) is not None, "ethernet": ethernet_port(doc),
     }
     return frozenset(name for name, present in checks.items() if present)
 

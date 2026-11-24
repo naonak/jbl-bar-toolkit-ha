@@ -6,13 +6,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorEntityDescription, SensorStateClass
-from homeassistant.const import PERCENTAGE, SIGNAL_STRENGTH_DECIBELS_MILLIWATT, EntityCategory, UnitOfTemperature, UnitOfTime
+from homeassistant.const import PERCENTAGE, SIGNAL_STRENGTH_DECIBELS_MILLIWATT, EntityCategory, UnitOfDataRate, UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
 from .coordinator import JblBarConfigEntry, JblBarCoordinator
-from .entity import JblBarEntity, eq_installed, setup_controls, smart_mode_memory
+from .entity import JblBarEntity, eq_installed, ethernet_port, setup_controls, smart_mode_memory
 from .lines import message_clock, timer_clock
 from .messages import messages_installed
 from .timers import timers_installed
@@ -51,6 +51,8 @@ def _eq_attributes(doc: dict[str, Any]) -> dict[str, Any]:
     attrs: dict[str, Any] = {"gains_db": eq.get("gains_db")}
     if eq.get("error"):
         attrs["reason"] = eq["error"]
+    # A curve saved for later still waits: the Cancel saved EQ button can undo it.
+    attrs["pending"] = eq.get("pending") is True
     return attrs
 
 
@@ -105,8 +107,17 @@ EQ_SENSORS = [
 ]
 
 
+# ETHERNET port reported: the negotiated link speed while a cable is connected.
+ETHERNET_SENSORS = [
+    Description(key="ethernet_speed", device_class=SensorDeviceClass.DATA_RATE, native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
+                entity_category=DIAG, icon="mdi:ethernet",
+                value=lambda d: (d.get("ethernet") or {}).get("speed_mbps") if (d.get("ethernet") or {}).get("connected") else None),
+]
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: JblBarConfigEntry, add: AddConfigEntryEntitiesCallback) -> None:
     descriptions = (SENSORS + (SETUP_SENSORS if setup_controls(entry.runtime_data.data) else [])
+                    + (ETHERNET_SENSORS if ethernet_port(entry.runtime_data.data) else [])
                     + (MEMORY_SENSORS if smart_mode_memory(entry.runtime_data.data) else [])
                     + (EQ_SENSORS if eq_installed(entry.runtime_data.data) else []))
     add(JblBarSensor(entry.runtime_data, description) for description in descriptions)

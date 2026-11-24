@@ -115,6 +115,9 @@
       },
       "restart": {
         "name": "Redémarrer"
+      },
+      "cancel_saved_eq": {
+        "name": "Annuler l'EQ enregistré"
       }
     },
     "sensor": {
@@ -186,6 +189,9 @@
       },
       "rear_battery_right": {
         "name": "Batterie arrière droite"
+      },
+      "ethernet_speed": {
+        "name": "Vitesse du lien Ethernet"
       }
     },
     "binary_sensor": {
@@ -200,6 +206,9 @@
       },
       "timer_ringing": {
         "name": "Minuteur qui sonne"
+      },
+      "ethernet": {
+        "name": "Ethernet"
       }
     },
     "notify": {

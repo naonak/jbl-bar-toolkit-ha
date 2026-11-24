@@ -63,6 +63,17 @@ def smart_mode_memory(doc: dict[str, Any] | None) -> bool:
     return ((doc or {}).get("automation") or {}).get("remembered_mode") in ("Standard", "Smart")
 
 
+def ethernet_port(doc: dict[str, Any] | None) -> bool:
+    """True when the remote reports the bar's ETHERNET port (state "ethernet")."""
+    ethernet = (doc or {}).get("ethernet")
+    return isinstance(ethernet, dict) and ethernet.get("available") is True
+
+
+def eq_pending(doc: dict[str, Any] | None) -> bool:
+    """True while a Front EQ saved for later waits and can still be cancelled (eq.pending)."""
+    return ((doc or {}).get("eq") or {}).get("pending") is True
+
+
 def setup_controls(doc: dict[str, Any] | None) -> bool:
     """True when the remote reads the bar's display (calibration, subwoofer pairing, audio format)."""
     return isinstance((doc or {}).get("setup"), dict)

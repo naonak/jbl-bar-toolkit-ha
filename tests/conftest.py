@@ -63,6 +63,9 @@ class FakeRemote:
         self.eq_status_override: str | None = None  # e.g. "reset_required"
         self.keep_eq = False  # remote that keeps the Front EQ until Reset (eq.kept)
         self.eq_kept: list | None = None
+        self.eq_cancel = True  # False: a remote without Cancel saved EQ (eq_cancel)
+        self.eq_undo: tuple | None = None  # like the Go server: (kept before) while a saved EQ waits
+        self.ethernet: dict | None = None  # a dict: a remote that reports the ETHERNET port
         self.bass_offset: float | None = 0.0  # None: remote without the bass offset extension
         self.remembered_mode: str | None = None  # set when smart_mode_memory is on
         self.display = True  # False: remote without the display-message extension
@@ -105,6 +108,7 @@ class FakeRemote:
             "system": {"cpu_percent": 12.5, "temperature_c": 51.0,
                        "memory": {"total_bytes": 400, "used_bytes": 100, "available_bytes": 300}},
             "wifi": {"signal_dbm": -50},
+            **({"ethernet": dict(self.ethernet)} if self.ethernet is not None else {}),
             **({"extensions": {
                 **({"bar91.bass-offset": {"offset_db": self.bass_offset, "status": "active" if self.bass_offset else "off"}}
                    if self.bass_offset is not None else {}),
@@ -134,6 +138,8 @@ class FakeRemote:
                 # Dropped by the bar (source change, Smart, wake): shown while it waits.
                 eq.update(gains_db=self.eq_kept, available=False, status="waiting",
                           error="Your EQ is re-applied automatically when Standard audio plays.")
+            if self.eq_undo is not None:
+                eq["pending"] = True
         if self.eq_status_override:
             eq["status"] = self.eq_status_override
         return eq
@@ -259,14 +265,23 @@ class FakeRemote:
         elif a == "input_tv": s["input"] = "TV / ARC"
         elif a == "input_bluetooth": s["input"] = "Bluetooth"
         elif a == "eq_apply" and self.keep_eq and not self.eq_state()["available"] and any(req["gains_db"]):
-            # Cannot apply now: the remote keeps it and applies it later.
+            # Cannot apply now: the remote keeps it and applies it later; until
+            # then it can go back to what was kept before (eq_cancel).
+            if self.eq_undo is None and self.eq_cancel:
+                self.eq_undo = (self.eq_kept,)
             self.eq_kept = list(req["gains_db"])
         elif a == "eq_apply":
             s["eq"], s["eq_on"] = req["gains_db"], True
-            self.eq_kept = list(req["gains_db"])
+            self.eq_kept, self.eq_undo = list(req["gains_db"]), None
         elif a == "eq_reset":
             s["eq"], s["eq_on"] = [0] * 5, False
-            self.eq_kept = None
+            self.eq_kept, self.eq_undo = None, None
+        elif a == "eq_cancel":
+            if not self.eq_cancel:
+                return web.json_response({"error": "unknown control", "state": self.state()}, status=409)
+            if self.eq_undo is None:
+                return web.json_response({"error": "no saved EQ is waiting", "state": self.state()}, status=409)
+            (self.eq_kept,), self.eq_undo = self.eq_undo, None
         await self.notify()
         return web.json_response(self.state())
 
